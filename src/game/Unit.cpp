@@ -5977,6 +5977,12 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                     CastSpell(this, 28682, true, castItem, triggeredByAura);
                     return (procEx & PROC_EX_CRITICAL_HIT); // charge update only at crit hits, no hidden cooldowns
                 }
+				// Arcane Blast proc-off only from arcane school and not from self
+                case 36032:
+                {
+                    if(procSpell->EffectTriggerSpell[1] == 36032 || GetSpellSchoolMask(procSpell) != SPELL_SCHOOL_MASK_ARCANE)
+                        return false;
+                }
                 // Glyph of Ice Block
                 case 56372:
                 {
@@ -6656,6 +6662,10 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
             if (dummySpell->SpellIconID == 2116)
             {
                 if(!procSpell)
+                    return false;
+					
+				//do not proc from spells that do not need combo points
+				if(!NeedsComboPoints(procSpell))
                     return false;
 
                 // energy cost save

@@ -1243,6 +1243,35 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     triggered_spell_id = 12654;
                     break;
                 }
+                // Empowered Fire
+                case 12654:
+                {
+                    if (Unit* caster = triggeredByAura->GetCaster())
+                    {
+                        if (pVictim != caster)
+                            return SPELL_AURA_PROC_FAILED;
+
+                        Unit::AuraList const& auras = caster->GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
+                        for (Unit::AuraList::const_iterator i = auras.begin(); i != auras.end(); i++)
+                        {
+                            switch((*i)->GetId())
+                            {
+                                case 31656:
+                                case 31657:
+                                case 31658:
+                                    if(roll_chance_i((*i)->GetSpellProto()->procChance))
+                                    {
+                                        caster->CastSpell( caster, 67545, true );
+                                        return SPELL_AURA_PROC_OK;
+                                    }
+                                    break;
+                                default:
+                                    continue;
+                            }
+                            break;
+                        }
+                    }
+                }
                 // Arcane Blast proc-off only from arcane school and not from self
                 case 36032:
                 {

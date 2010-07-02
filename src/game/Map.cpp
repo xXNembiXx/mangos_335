@@ -680,7 +680,7 @@ void Map::Remove(Player *player, bool remove)
 
     DEBUG_FILTER_LOG(LOG_FILTER_PLAYER_MOVES, "Remove player %s from grid[%u,%u]", player->GetName(), cell.GridX(), cell.GridY());
     NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
-    MANGOS_ASSERT(grid != NULL);
+    //MANGOS_ASSERT(grid != NULL);
 
     RemoveFromGrid(player,grid,cell);
 

@@ -12234,7 +12234,7 @@ bool Unit::SelectHostileTarget()
     //next-victim-selection algorithm and evade mode are called
     //threat list sorting etc.
 
-    ASSERT(GetTypeId()== TYPEID_UNIT);
+    //ASSERT(GetTypeId()== TYPEID_UNIT);
 
     if (!this->isAlive())
         return false;

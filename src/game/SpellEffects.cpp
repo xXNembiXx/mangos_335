@@ -7015,6 +7015,9 @@ void Spell::EffectStuck(SpellEffectIndex /*eff_idx*/)
 
     if(pTarget->IsTaxiFlying())
         return;
+		
+    if(pTarget->InBattleGround())
+        return;
 
     pTarget->RepopAtGraveyard();
 

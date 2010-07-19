@@ -741,6 +741,7 @@ void WorldSession::SendListInventory(uint64 vendorguid)
     if (!vItems)
     {
         _player->SendSellError(SELL_ERR_CANT_FIND_VENDOR, NULL, 0, 0);
+        SendPacket(&data);
         return;
     }
 

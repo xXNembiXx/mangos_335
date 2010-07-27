@@ -1793,7 +1793,6 @@ bool InstanceMap::Add(Player *player)
                         // cannot jump to a different instance without resetting it
                         //ASSERT(playerBind->save == mapSave);
 						player->RepopAtGraveyard();
-						return false;
                 }
             }
         }

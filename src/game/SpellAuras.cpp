@@ -4179,7 +4179,7 @@ void Aura::HandleAuraModStun(bool apply, bool Real)
 
     Unit *target = GetTarget();
 
-    if(target->isInFlight())
+    if(target->IsTaxiFlying())
         return;
 
     if (apply)

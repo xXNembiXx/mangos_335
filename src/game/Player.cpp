@@ -13613,7 +13613,7 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
             if(itr->second->autocast && itr->second->IsFitToRequirements(this,zone,area))
                 if (!HasAura(itr->second->spellId, EFFECT_INDEX_0) )
 
-                if(itr->second->spellId != 58600 || (HasAuraType(SPELL_AURA_MOD_FLIGHT_SPEED_MOUNTED) || HasAuraType(SPELL_AURA_FLY) || isInFlight()))
+                if(itr->second->spellId != 58600 || (HasAuraType(SPELL_AURA_MOD_FLIGHT_SPEED_MOUNTED) || HasAuraType(SPELL_AURA_FLY) || IsTaxiFlying()))
                     CastSpell(this,itr->second->spellId,true);
     }
 

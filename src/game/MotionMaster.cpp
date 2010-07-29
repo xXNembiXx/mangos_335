@@ -69,6 +69,9 @@ MotionMaster::UpdateMotion(uint32 diff)
 {
     if( i_owner->hasUnitState(UNIT_STAT_CAN_NOT_MOVE) )
         return;
+
+  if (!empty())
+  {
     ASSERT( !empty() );
     m_cleanFlag |= MMCF_UPDATE;
     if (!top()->Update(*i_owner, diff))
@@ -100,6 +103,7 @@ MotionMaster::UpdateMotion(uint32 diff)
             m_cleanFlag &= ~MMCF_RESET;
         }
     }
+  }
 }
 
 void
@@ -109,15 +113,17 @@ MotionMaster::DirectClean(bool reset, bool all)
     {
         MovementGenerator *curr = top();
         pop();
-        curr->Finalize(*i_owner);
+        if (i_owner && i_owner->IsInWorld())
+            curr->Finalize(*i_owner);
         if (!isStatic( curr ))
             delete curr;
     }
 
     if (!all && reset)
     {
-        ASSERT( !empty() );
-        top()->Reset(*i_owner);
+        //ASSERT( !empty() );
+        if (!empty())
+            top()->Reset(*i_owner);
     }
 }
 
@@ -139,7 +145,8 @@ MotionMaster::DelayedClean(bool reset, bool all)
     {
         MovementGenerator *curr = top();
         pop();
-        curr->Finalize(*i_owner);
+        if (i_owner && i_owner->IsInWorld())
+            curr->Finalize(*i_owner);
         if (!isStatic( curr ))
             m_expList->push_back(curr);
     }

@@ -200,9 +200,9 @@ bool DatabaseMysql::_Query(const char *sql, MYSQL_RES **pResult, MYSQL_FIELD **p
     {
         // guarded block for thread-safe mySQL request
         ACE_Guard<ACE_Thread_Mutex> query_connection_guard(mMutex);
-        #ifdef MANGOS_DEBUG
+
         uint32 _s = getMSTime();
-        #endif
+
         if(mysql_query(mMysql, sql))
         {
             sLog.outErrorDb( "SQL: %s", sql );

@@ -2424,6 +2424,21 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
 							if (Unit* caster = GetCaster())
 								caster->CastSpell(caster, 72351, true);
 						return;
+					case 43351:
+						if(Unit* pCaster = GetCaster())
+						{
+							if(pCaster->GetTypeId() == TYPEID_PLAYER)
+							{
+								Player* pPlayer = (Player*)pCaster;
+
+								if(!pPlayer)
+									return;
+
+								pPlayer->SetStandState(UNIT_STAND_STATE_SIT);
+								pPlayer->SetClientControl(pPlayer, 0);
+							}
+						}
+						return;
                 }
                 break;
             }
@@ -2695,6 +2710,26 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     m_target->RemoveAurasDueToSpell(44544);
                 return;
             }
+			case 43351:
+			{
+				if (Unit* pCaster = GetCaster())
+				{
+					if(pCaster->GetTypeId() == TYPEID_PLAYER)
+					{
+						Player* pPlayer = (Player*)pCaster;
+
+						if(!pPlayer)
+							return;
+
+						pPlayer->SetStandState(UNIT_STAND_STATE_STAND);
+						pPlayer->SetClientControl(pPlayer, 1);
+
+						// spawn your inner turmoil, clone visual, weapons, attack power, etc...
+						pPlayer->CastSpell(pPlayer, 50217, true);
+					}
+				}
+				return;
+			}
         }
 
         // Living Bomb

@@ -15813,7 +15813,6 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
                 if (!damage)
                     damage = aura->GetModifier()->m_amount;
 
-            {
                 // reset stolen single target auras
                 if (caster_guid != GetGUID() && aura->IsSingleTarget())
                     aura->SetIsSingleTarget(false);

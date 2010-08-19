@@ -44,9 +44,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     if(!GetPlayer()->IsBeingTeleportedFar())
         return;
 
-    if (_player->GetVehicleKit())
-        _player->GetVehicleKit()->RemoveAllPassengers();
-
     // get the teleport destination
     WorldLocation &loc = GetPlayer()->GetTeleportDest();
 
@@ -278,10 +275,6 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                 {
                     plMover->m_transport = (*iter);
                     (*iter)->AddPassenger(plMover);
-
-                    if (plMover->GetVehicleKit())
-                        plMover->GetVehicleKit()->RemoveAllPassengers();
-
                     break;
                 }
             }
@@ -317,8 +310,8 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         movementInfo.Write(data);                               // write data
         mover->SendMessageToSetExcept(&data, _player);
 
+        plMover->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
         plMover->m_movementInfo = movementInfo;
-		plMover->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
         plMover->UpdateFallInformationIfNeed(movementInfo, opcode);
 
         // after move info set
@@ -358,6 +351,11 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                 plMover->RepopAtGraveyard();
             }
         }
+    }
+    else                                                    // creature charmed
+    {
+        if(mover->IsInWorld())
+            mover->GetMap()->CreatureRelocation((Creature*)mover, movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
     }
 }
 
@@ -481,91 +479,18 @@ void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
     recv_data >> guid.ReadAsPacked();
     recv_data >> mi;
 
-    if(!GetPlayer()->GetVehicle())
+    uint64 vehicleGUID = _player->GetCharmGUID();
+
+    if(!vehicleGUID)                                        // something wrong here...
         return;
 
-    GetPlayer()->m_movementInfo = mi;
-    GetPlayer()->ExitVehicle();
-}
+    _player->m_movementInfo = mi;
 
-void WorldSession::HandleRequestVehicleExit(WorldPacket &recv_data)
-{
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_EXIT");
-    recv_data.hexlike();
-
-    GetPlayer()->ExitVehicle();
-}
-
-void WorldSession::HandleRequestVehiclePrevSeat(WorldPacket &recv_data)
-{
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_PREV_SEAT");
-    recv_data.hexlike();
-
-    GetPlayer()->ChangeSeat(-1, false);
-}
-
-void WorldSession::HandleRequestVehicleNextSeat(WorldPacket &recv_data)
-{
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_NEXT_SEAT");
-    recv_data.hexlike();
-
-    GetPlayer()->ChangeSeat(-1, true);
-}
-
-void WorldSession::HandleRequestVehicleSwitchSeat(WorldPacket &recv_data)
-{
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_SWITCH_SEAT");
-    recv_data.hexlike();
-
-    ObjectGuid guid;
-    recv_data >> guid.ReadAsPacked();
-
-    int8 seatId;
-    recv_data >> seatId;
-
-    Unit *pVehicleBase = GetPlayer()->GetVehicleBase();
-
-    if(!pVehicleBase)
-        return;
-
-    if (pVehicleBase->GetObjectGuid() == guid)
-        GetPlayer()->ChangeSeat(seatId);
-}
-
-void WorldSession::HandleEnterPlayerVehicle(WorldPacket &recv_data)
-{
-    DEBUG_LOG("WORLD: Recvd CMSG_PLAYER_VEHICLE_ENTER");
-    recv_data.hexlike();
-
-    ObjectGuid guid;
-    recv_data >> guid;
-
-    if (Player* pl = ObjectAccessor::FindPlayer(guid))
+    // using charm guid, because we don't have vehicle guid...
+    if(Vehicle *vehicle = _player->GetMap()->GetVehicle(vehicleGUID))
     {
-        if (!pl->GetVehicleKit())
-            return;
-        if (!pl->IsInSameRaidWith(GetPlayer()))
-            return;
-        if (!pl->IsWithinDistInMap(GetPlayer(), INTERACTION_DISTANCE))
-            return;
-        if (pl->GetTransport())
-            return;
-        GetPlayer()->EnterVehicle(pl->GetVehicleKit());
-    }
-}
-
-void WorldSession::HandleEjectPasenger(WorldPacket &recv_data)
-{
-    DEBUG_LOG("WORLD: Recvd CMSG_EJECT_PASSENGER");
-    recv_data.hexlike();
-
-    ObjectGuid guid;
-    recv_data >> guid;
-
-    if (GetPlayer()->GetVehicleKit())
-    {
-        if (Player* pl = ObjectAccessor::FindPlayer(guid))
-            pl->ExitVehicle();
+        // Aura::HandleAuraControlVehicle will call Player::ExitVehicle
+        vehicle->RemoveSpellsCausingAura(SPELL_AURA_CONTROL_VEHICLE);
     }
 }
 

@@ -289,16 +289,13 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                         }
                     }
                 }
-
-                if (unit->GetVehicle())
-                   unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
             }
             break;
             case TYPEID_PLAYER:
             {
                 Player *player = ((Player*)unit);
 
-                if (player->GetTransport() || player->GetVehicle())
+                if(player->GetTransport())
                     player->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
                 else
                     player->m_movementInfo.RemoveMovementFlag(MOVEFLAG_ONTRANSPORT);
@@ -527,9 +524,9 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
 
     // 0x80
-    if(updateFlags & UPDATEFLAG_VEHICLE)
+    if(updateFlags & UPDATEFLAG_VEHICLE)                    // unused for now
     {
-        *data << uint32(((Unit*)this)->GetVehicleKit()->GetVehicleId());  // vehicle id
+        *data << uint32(((Vehicle*)this)->GetVehicleId());  // vehicle id
         *data << float(((WorldObject*)this)->GetOrientation());
     }
 

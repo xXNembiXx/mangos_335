@@ -310,16 +310,15 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     movementInfo.UpdateTime(getMSTime());
 
     WorldPacket data(opcode, recv_data.size());
-    data.appendPackGUID(mover->GetGUID());                  // write guid
-    movementInfo.Write(data);                               // write data
-    mover->SendMessageToSetExcept(&data, _player);
-
-    plMover->m_movementInfo = movementInfo;
-    plMover->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
 	
 	if(plMover)                                             // nothing is charmed, or player charmed
     {
-        
+        data.appendPackGUID(mover->GetGUID());                  // write guid
+        movementInfo.Write(data);                               // write data
+        mover->SendMessageToSetExcept(&data, _player);
+
+        plMover->m_movementInfo = movementInfo;
+		plMover->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
         plMover->UpdateFallInformationIfNeed(movementInfo, opcode);
 
         // after move info set

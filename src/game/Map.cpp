@@ -1790,9 +1790,15 @@ bool InstanceMap::Add(Player *player)
                     if(!playerBind)
                         player->BindToInstance(GetInstanceSave(), false);
                     else
-                        // cannot jump to a different instance without resetting it
-                        //ASSERT(playerBind->save == mapSave);
-						if (!player->isGameMaster()) player->RepopAtGraveyard();
+                    {
+                        if (playerBind->save != GetInstanceSave())
+                        {
+                            // cannot jump to a different instance without resetting it
+                            //ASSERT(playerBind->save == mapSave);
+                            if (!player->isGameMaster()) player->RepopAtGraveyard();
+                            return false;
+                        }
+                    }
                 }
             }
         }

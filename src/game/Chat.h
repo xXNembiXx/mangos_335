@@ -510,7 +510,7 @@ class ChatHandler
         bool HandleKickPlayerCommand(const char * args);
 
         bool HandleTicketCommand(const char* args);
-        bool HandleDelTicketCommand(const char* args);
+        bool HandleCloseTicketCommand(const char* args);
         bool HandleMaxSkillCommand(const char* args);
         bool HandleSetSkillCommand(const char* args);
         bool HandleRespawnCommand(const char* args);
@@ -551,7 +551,7 @@ class ChatHandler
         GameObject* GetObjectGlobalyWithGuidOrNearWithDbGuid(uint32 lowguid,uint32 entry);
 
         // Utility methods for commands
-        void ShowTicket(uint64 guid, char const* text, char const* time);
+        void ShowTicket(uint64 ticketId, uint64 guid, char const* text, char const* time, uint64 aGuid, uint8 aLevel);
         bool ShowAccountListHelper(QueryResult* result, uint32* limit = NULL, bool title = true, bool error = true);
         bool ShowPlayerListHelper(QueryResult* result, uint32* limit = NULL, bool title = true, bool error = true);
         bool LookupPlayerSearchCommand(QueryResult* result, uint32* limit = NULL);

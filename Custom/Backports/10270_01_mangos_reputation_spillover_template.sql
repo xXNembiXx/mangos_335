@@ -1,5 +1,3 @@
-ALTER TABLE db_version CHANGE COLUMN required_10263_03_mangos_pool_pool required_10270_01_mangos_reputation_spillover_template bit;
-
 DROP TABLE IF EXISTS `reputation_spillover_template`;
 CREATE TABLE `reputation_spillover_template` (
   `faction` smallint(6) unsigned NOT NULL default '0' COMMENT 'faction entry',

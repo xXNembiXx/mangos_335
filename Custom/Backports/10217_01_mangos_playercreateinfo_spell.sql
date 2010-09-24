@@ -1,5 +1,3 @@
-ALTER TABLE db_version CHANGE COLUMN required_10208_01_mangos_playercreateinfo required_10217_01_mangos_playercreateinfo_spell bit;
-
 DELETE FROM playercreateinfo_spell WHERE spell=1843 ;
 DELETE FROM playercreateinfo_spell WHERE spell=21084;
 -- humans

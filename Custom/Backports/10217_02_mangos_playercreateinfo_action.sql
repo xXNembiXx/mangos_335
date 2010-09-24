@@ -1,6 +1,3 @@
-ALTER TABLE db_version CHANGE COLUMN required_10217_01_mangos_playercreateinfo_spell required_10217_02_mangos_playercreateinfo_action bit;
-
-
 DELETE FROM playercreateinfo_action WHERE action  IN (117, 21084, 159, 2070, 4540);
 
 INSERT IGNORE INTO playercreateinfo_action (race, class, button, action, type) VALUES

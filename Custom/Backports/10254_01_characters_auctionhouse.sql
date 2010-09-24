@@ -1,5 +1,3 @@
-ALTER TABLE character_db_version CHANGE COLUMN required_10160_02_characters_pet_aura required_10254_01_characters_auctionhouse bit;
-
 ALTER TABLE auctionhouse
   ADD COLUMN houseid int(11) unsigned NOT NULL default '0' AFTER id;
 

@@ -22587,3 +22587,8 @@ void Player::_LoadRandomBGStatus(QueryResult *result)
         delete result;
     }
 }
+
+void Player::CompletedAchievement(AchievementEntry const* entry)
+{
+    GetAchievementMgr().CompletedAchievement(entry);
+}

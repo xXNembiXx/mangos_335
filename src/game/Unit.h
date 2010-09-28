@@ -669,8 +669,8 @@ MovementFlags const movementOrTurningFlagsMask = MovementFlags(
 enum MovementFlags2
 {
     MOVEFLAG2_NONE              = 0x0000,
-    MOVEFLAG2_UNK1              = 0x0001,
-    MOVEFLAG2_UNK2              = 0x0002,
+    MOVEFLAG2_NO_STRAFE         = 0x0001,
+    MOVEFLAG2_NO_JUMPING        = 0x0002,
     MOVEFLAG2_UNK3              = 0x0004,
     MOVEFLAG2_FULLSPEEDTURNING  = 0x0008,
     MOVEFLAG2_FULLSPEEDPITCHING = 0x0010,
@@ -1817,6 +1817,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         SpellAuraProcResult HandleMaelstromWeaponAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleAddPctModifierAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleModDamagePercentDoneAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
+        SpellAuraProcResult HandlePeriodicDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleNULLProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
         {
             // no proc handler for this aura type

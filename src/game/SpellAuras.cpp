@@ -917,7 +917,7 @@ bool Aura::CanProcFrom(SpellEntry const *spell, uint32 EventProcEx, uint32 procE
     // if no class mask defined - allow proc
     if (!((uint64*)ptr)[0] && !ptr[2])
     {
-        if (IsPassiveSpell(GetSpellProto()) && !(EventProcEx & PROC_EX_EX_TRIGGER_ALWAYS))
+        if (!(EventProcEx & PROC_EX_EX_TRIGGER_ALWAYS))
         {
             // Check for extra req (if none) and hit/crit
             if (EventProcEx == PROC_EX_NONE)
@@ -931,7 +931,7 @@ bool Aura::CanProcFrom(SpellEntry const *spell, uint32 EventProcEx, uint32 procE
             else // Passive spells hits here only if resist/reflect/immune/evade
             {
                 // Passive spells can`t trigger if need hit (exclude cases when procExtra include non-active flags)
-                if ((EventProcEx & PROC_EX_NORMAL_HIT & procEx) && !active)
+                if ((EventProcEx & (PROC_EX_NORMAL_HIT|PROC_EX_CRITICAL_HIT) & procEx) && !active)
                     return false;
             }
         }
@@ -2349,9 +2349,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
         // Living Bomb
         if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_MAGE && (GetSpellProto()->SpellFamilyFlags & UI64LIT(0x2000000000000)))
         {
-            // Zero duration is equal to AURA_REMOVE_BY_DEFAULT. We can't use it directly, as it is set even
-            // when removing aura from one target due to casting Living Bomb at other.
-            if (m_duration == 0 || m_removeMode == AURA_REMOVE_BY_DISPEL)
+            if (m_removeMode == AURA_REMOVE_BY_EXPIRE || m_removeMode == AURA_REMOVE_BY_DISPEL)
                 target->CastSpell(target,m_modifier.m_amount,true,NULL,this);
 
             return;
@@ -5339,6 +5337,8 @@ void Aura::HandleModPowerRegen(bool apply, bool Real)       // drinking
         // Anger Management (only spell use this aura for rage)
         if (pt == POWER_RAGE)
             m_modifier.periodictime = 3000;
+        else if (pt == POWER_RUNIC_POWER)
+            m_modifier.periodictime = 5000;
         else
             m_modifier.periodictime = 2000;
     }
@@ -6359,7 +6359,7 @@ void Aura::HandleAuraRetainComboPoints(bool apply, bool Real)
 
     // combo points was added in SPELL_EFFECT_ADD_COMBO_POINTS handler
     // remove only if aura expire by time (in case combo points amount change aura removed without combo points lost)
-    if( !apply && m_duration==0 && target->GetComboTarget())
+    if( !apply && m_removeMode == AURA_REMOVE_BY_EXPIRE && target->GetComboTarget())
         if(Unit* unit = ObjectAccessor::GetUnit(*GetTarget(),target->GetComboTarget()))
             target->AddComboPoints(unit, -m_modifier.m_amount);
 }
@@ -7124,6 +7124,9 @@ void Aura::PeriodicTick()
             // so 17 is rounded amount for 5 sec tick grow ~ 1 range grow in 3 sec
             if(pt == POWER_RAGE)
                 target->ModifyPower(pt, m_modifier.m_amount * 3 / 5);
+            // Butchery
+            else if(pt == POWER_RUNIC_POWER && target->isInCombat())
+                target->ModifyPower(pt, m_modifier.m_amount);
             break;
         }
         // Here tick dummy auras
@@ -7572,9 +7575,6 @@ void Aura::PeriodicDummyTick()
             // Summon Gargoyle
 //            if (spell->SpellFamilyFlags & UI64LIT(0x0000008000000000))
 //                return;
-            // Death Rune Mastery
-//            if (spell->SpellFamilyFlags & UI64LIT(0x0000000000004000))
-//                return;
             // Bladed Armor
             if (spell->SpellIconID == 2653)
             {
@@ -7584,12 +7584,26 @@ void Aura::PeriodicDummyTick()
                 target->CastCustomSpell(target, 61217, &apBonus, &apBonus, NULL, true, NULL, this);
                 return;
             }
+            // Death Rune Mastery
             // Reaping
-//            if (spell->SpellIconID == 22)
-//                return;
             // Blood of the North
-//            if (spell->SpellIconID == 30412)
-//                return;
+            if (spell->SpellIconID == 22 || spell->SpellIconID == 3041 || spell->SpellIconID == 30412)
+            {
+                if (target->GetTypeId() != TYPEID_PLAYER)
+                    return;
+                if (target->isInCombat())
+                    return;
+
+                Player *plr = (Player*)GetTarget();
+                for(uint32 i = 0; i < MAX_RUNES; ++i)
+                {
+                    RuneType rune = plr->GetCurrentRune(i);
+                    if (rune == RUNE_DEATH)
+                        plr->ConvertRune(i, plr->GetBaseRune(i));
+                }
+
+                return;
+            }
             break;
         }
         default:
@@ -8086,6 +8100,9 @@ void SpellAuraHolder::_AddSpellAuraHolder()
         if(m_spellProto->Dispel == DISPEL_ENRAGE)
             m_target->ModifyAuraState(AURA_STATE_ENRAGE, true);
 
+         // Mechanic bleed aura state
+         if(GetAllSpellMechanicMask(m_spellProto) & (1 << (MECHANIC_BLEED-1)))
+             m_target->ModifyAuraState(AURA_STATE_MECHANIC_BLEED, true);
     }
 }
 
@@ -8139,6 +8156,10 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
         // Enrage aura state
         if(m_spellProto->Dispel == DISPEL_ENRAGE)
             m_target->ModifyAuraState(AURA_STATE_ENRAGE, false);
+
+        // Mechanic bleed aura state
+        if(GetAllSpellMechanicMask(m_spellProto) & (1 << (MECHANIC_BLEED-1)))
+            m_target->ModifyAuraState(AURA_STATE_MECHANIC_BLEED, false);
 
         uint32 removeState = 0;
         uint64 removeFamilyFlag = m_spellProto->SpellFamilyFlags;

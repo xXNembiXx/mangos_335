@@ -2814,6 +2814,13 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
                 pet->CastSpell(pet, 28305, true);
             return;
         }
+		// Glyph of Mirror Image
+        case 58832:
+        {
+            if (m_caster->HasAura(63093))
+                m_caster->CastSpell(m_caster, 65047, true); // Mirror Image
+            return;
+        }
         // Empower Rune Weapon
         case 53258:
         {
@@ -4030,6 +4037,8 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
                     //SUMMON_TYPE_TOTEM2 = 647: 52893, Anti-Magic Zone (npc used)
                     if(prop_id == 121 || prop_id == 647)
                         DoSummonTotem(eff_idx);
+					else if (prop_id == 1021)
+                        DoSummonGuardian(eff_idx, summon_prop->FactionId);
                     else
                         DoSummonWild(eff_idx, summon_prop->FactionId);
                     break;
@@ -4685,6 +4694,48 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
         m_caster->AddGuardian(spawnCreature);
 
         map->Add((Creature*)spawnCreature);
+
+		switch(pet_entry)
+        {
+            case 31216:
+            {
+                // set bounding and combat radiuses to player defaults values
+                spawnCreature->SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, DEFAULT_WORLD_OBJECT_SIZE);
+                spawnCreature->SetFloatValue(UNIT_FIELD_COMBATREACH, 1.5f);
+                // copy onwer's SheathState and UnitBytes2_Flags
+                spawnCreature->SetUInt32Value(UNIT_FIELD_BYTES_2,m_caster->GetUInt32Value(UNIT_FIELD_BYTES_2));
+                //Set Health and Manna
+                spawnCreature->SetMaxHealth(m_caster->GetMaxHealth()/6.0f);
+                spawnCreature->SetHealth(m_caster->GetHealth()/6.0f);
+                spawnCreature->SetMaxPower(POWER_MANA, m_caster->GetMaxPower(POWER_MANA)/6.0f);
+                spawnCreature->SetPower(POWER_MANA, m_caster->GetPower(POWER_MANA)/6.0f);
+                // copy owner auras
+                Unit::SpellAuraHolderMap const& holders = m_caster->GetSpellAuraHolderMap();
+                for (Unit::SpellAuraHolderMap::const_iterator itr = holders.begin(); itr != holders.end(); ++itr)
+                {
+                    SpellAuraHolder *holder = (*itr).second;
+                    for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+                    {
+                        if (Aura *aur = holder->GetAuraByEffectIndex(SpellEffectIndex(i)))
+                        {
+                            if (aur && aur->IsPositive() && !holder->IsPassive())
+                            {
+                                SpellAuraHolder *new_holder = CreateSpellAuraHolder(aur->GetSpellProto(), spawnCreature, m_caster);
+                                int32 bp = aur->GetBasePoints();
+                                Aura * newA = CreateAura(aur->GetSpellProto(), aur->GetEffIndex(), &bp, new_holder, (Unit*)spawnCreature);
+                                newA->SetAuraMaxDuration( aur->GetAuraMaxDuration() );
+                                newA->SetAuraDuration( aur->GetAuraDuration() );
+                                new_holder->SetIsSingleTarget(false);
+                                new_holder->AddAura(newA, newA->GetEffIndex());
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+         }
     }
 }
 
@@ -5966,6 +6017,9 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 44870, true);
                     break;
                 }
+				case 45204: // Clone Me!
+                    unitTarget->CastSpell(m_caster, damage, true);
+                    break;
                 case 45206:                                 // Copy Off-hand Weapon
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT || !unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)

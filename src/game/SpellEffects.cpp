@@ -2814,6 +2814,14 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
                 pet->CastSpell(pet, 28305, true);
             return;
         }
+		// Mirror Image
+		case 58832:
+		{
+			// Glyph of Mirror Image
+			if (m_caster->HasAura(63093))
+				m_caster->CastSpell(m_caster, 65047, true); // Mirror Image 	
+			break;        
+		}
         // Empower Rune Weapon
         case 53258:
         {
@@ -4030,6 +4038,8 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
                     //SUMMON_TYPE_TOTEM2 = 647: 52893, Anti-Magic Zone (npc used)
                     if(prop_id == 121 || prop_id == 647)
                         DoSummonTotem(eff_idx);
+					else if (prop_id == 1021)
+						DoSummonGuardian(eff_idx, summon_prop->FactionId);
                     else
                         DoSummonWild(eff_idx, summon_prop->FactionId);
                     break;
@@ -4578,6 +4588,7 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
         {
             summon->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
             summon->SetCreatorGUID(m_caster->GetGUID());
+			summon->SetOwnerGUID(m_caster->GetGUID());
 
             if(forceFaction)
                 summon->setFaction(forceFaction);
@@ -5972,6 +5983,9 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 44870, true);
                     break;
                 }
+				case 45204: // Clone 
+					unitTarget->CastSpell(m_caster, damage, true);
+					break;
                 case 45206:                                 // Copy Off-hand Weapon
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT || !unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)

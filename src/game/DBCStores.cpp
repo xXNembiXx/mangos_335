@@ -925,7 +925,7 @@ bool IsPointInAreaTriggerZone(AreaTriggerEntry const* atEntry, uint32 mapid, flo
         // rotate the players position instead of rotating the whole cube, that way we can make a simplified
         // is-in-cube check and we have to calculate only one point instead of 4
 
-        // 2PI = 360 , keep in mind that ingame orientation is counter-clockwise
+        // 2PI = 360
         double rotation = 2*M_PI-atEntry->box_orientation;
         double sinVal = sin(rotation);
         double cosVal = cos(rotation);
@@ -959,4 +959,5 @@ MANGOS_DLL_SPEC DBCStorage <FactionEntry>       const* GetFactionStore()        
 MANGOS_DLL_SPEC DBCStorage <ItemEntry>          const* GetItemDisplayStore()    { return &sItemStore;           }
 MANGOS_DLL_SPEC DBCStorage <CreatureDisplayInfoEntry> const* GetCreatureDisplayStore() { return &sCreatureDisplayInfoStore; }
 MANGOS_DLL_SPEC DBCStorage <EmotesEntry>        const* GetEmotesStore()         { return &sEmotesStore;         }
+MANGOS_DLL_SPEC DBCStorage <AchievementEntry>   const* GetAchievementStore()    { return &sAchievementStore;    }
 MANGOS_DLL_SPEC DBCStorage <EmotesTextEntry>    const* GetEmotesTextStore()     { return &sEmotesTextStore;     }

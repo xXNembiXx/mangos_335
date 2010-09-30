@@ -14671,7 +14671,7 @@ void Unit::MonsterMove(float x, float y, float z, uint32 transitTime)
             if (MovementGenerator *movgen = c->GetMotionMaster()->top())
                 movgen->Interrupt(*c);
 
-        GetMap()->CreatureRelocation((Creature*)this, x, y, z, 0.0f);
+        SetPosition(x, y, z, 0.0f);
 
         // finished relocation, movegen can different from top before creature relocation,
         // but apply Reset expected to be safe in any case
@@ -14693,7 +14693,7 @@ void Unit::MonsterMoveWithSpeed(float x, float y, float z, uint32 transitTime)
             if (MovementGenerator *movgen = c->GetMotionMaster()->top())
                 movgen->Interrupt(*c);
 
-        GetMap()->CreatureRelocation((Creature*)this, x, y, z, 0.0f);
+        SetPosition(x, y, z, 0.0f);
 
         // finished relocation, movegen can different from top before creature relocation,
         // but apply Reset expected to be safe in any case

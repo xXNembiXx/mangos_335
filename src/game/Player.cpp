@@ -8185,6 +8185,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
             break;
         }
         case HIGHGUID_UNIT:
+		case HIGHGUID_VEHICLE:
         {
             Creature *creature = GetMap()->GetCreature(guid);
 
@@ -14731,7 +14732,7 @@ void Player::KilledMonsterCredit( uint32 entry, ObjectGuid guid )
 
 void Player::CastedCreatureOrGO( uint32 entry, ObjectGuid guid, uint32 spell_id, bool original_caster )
 {
-    bool isCreature = guid.IsCreature();
+    bool isCreature = guid.IsCreatureOrVehicle();
 
     uint32 addCastCount = 1;
     for(int i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
@@ -22432,6 +22433,7 @@ Object* Player::GetObjectByTypeMask(ObjectGuid guid, TypeMask typemask)
                 return GetMap()->GetGameObject(guid);
             break;
         case HIGHGUID_UNIT:
+		case HIGHGUID_VEHICLE:
             if ((typemask & TYPEMASK_UNIT) && IsInWorld())
                 return GetMap()->GetCreature(guid);
             break;

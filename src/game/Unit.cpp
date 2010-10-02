@@ -914,7 +914,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             if (cVictim->isTemporarySummon())
             {
                 TemporarySummon* pSummon = (TemporarySummon*)cVictim;
-                if (pSummon->GetSummonerGuid().IsCreature())
+                if (pSummon->GetSummonerGuid().IsCreatureOrVehicle())
                     if(Creature* pSummoner = cVictim->GetMap()->GetCreature(pSummon->GetSummonerGuid()))
                         if (pSummoner->AI())
                             pSummoner->AI()->SummonedCreatureJustDied(cVictim);

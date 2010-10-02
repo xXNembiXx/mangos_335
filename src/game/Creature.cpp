@@ -144,7 +144,7 @@ Creature::~Creature()
 void Creature::AddToWorld()
 {
     ///- Register the creature for guid lookup
-    if(!IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
+    if(!IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().insert<Creature>(GetGUID(), (Creature*)this);
 
     Unit::AddToWorld();
@@ -153,7 +153,7 @@ void Creature::AddToWorld()
 void Creature::RemoveFromWorld()
 {
     ///- Remove the creature from the accessor
-    if(IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
+    if(IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().erase<Creature>(GetGUID(), (Creature*)NULL);
 
     Unit::RemoveFromWorld();
@@ -663,19 +663,21 @@ bool Creature::Create(uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, 
 
     ASSERT(map);
 
+    HighGuid hi = cinfo->VehicleId ? HIGHGUID_VEHICLE : HIGHGUID_UNIT;
+
     if (map->GetInstanceId() == 0)
     {
         // Creature can be loaded already in map if grid has been unloaded while creature walk to another grid
         // FIXME: until creature guids is global and for instances used dynamic generated guids
         // in instance possible load creature duplicates with same DB guid but different in game guids
         // This will be until implementing per-map creature guids
-        if (map->GetCreature(ObjectGuid(HIGHGUID_UNIT, Entry, guidlow)))
+        if (map->GetCreature(ObjectGuid(hi, Entry, guidlow)))
             return false;
     }
     else
-        guidlow = sObjectMgr.GenerateLowGuid(HIGHGUID_UNIT);
+        guidlow = sObjectMgr.GenerateLowGuid(hi);
 
-    ObjectGuid guid(HIGHGUID_UNIT, Entry, guidlow);
+    ObjectGuid guid(hi, Entry, guidlow);
 
     SetMap(map);
     SetPhaseMask(phaseMask,false);
@@ -1116,6 +1118,10 @@ bool Creature::CreateFromProto(ObjectGuid guid, uint32 Entry, uint32 team, const
 
     if (!UpdateEntry(Entry, team, data, false))
         return false;
+
+    // Checked at startup
+    if (GetCreatureInfo()->VehicleId)
+        CreateVehicleKit(GetCreatureInfo()->VehicleId);
 
     return true;
 }

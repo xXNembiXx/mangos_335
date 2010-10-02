@@ -24,8 +24,10 @@ class BattleGround;
 class BattleGroundSAScore : public BattleGroundScore
 {
     public:
-        BattleGroundSAScore() {};
+        BattleGroundSAScore(): DemolishersDestroyed(0), GatesDestroyed(0) {};
         virtual ~BattleGroundSAScore() {};
+        uint32 DemolishersDestroyed;
+        uint32 GatesDestroyed;
 };
 
 class BattleGroundSA : public BattleGround
@@ -41,6 +43,7 @@ class BattleGroundSA : public BattleGround
         virtual void AddPlayer(Player *plr);
         virtual void StartingEventCloseDoors();
         virtual void StartingEventOpenDoors();
+		virtual void EventPlayerDamegeGO(Player *player, GameObject* target_obj, uint32 eventId);
 
         void RemovePlayer(Player *plr,uint64 guid);
         void HandleAreaTrigger(Player *Source, uint32 Trigger);

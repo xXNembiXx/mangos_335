@@ -12289,6 +12289,10 @@ bool Unit::CanHaveThreatList() const
     if( ((Creature*)this)->isPet() && IS_PLAYER_GUID(((Pet*)this)->GetOwnerGUID()) )
         return false;
 
+    // Is it correct?
+    if (isCharmed())
+        return false;
+
     return true;
 }
 

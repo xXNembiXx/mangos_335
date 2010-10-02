@@ -31,6 +31,9 @@
 
 void WorldSession::HandlePetAction( WorldPacket & recv_data )
 {
+    DEBUG_LOG("WORLD: Received CMSG_PET_ACTION");
+    recv_data.hexlike();
+
     uint64 guid1;
     uint32 data;
     uint64 guid2;
@@ -82,6 +85,10 @@ void WorldSession::HandlePetAction( WorldPacket & recv_data )
     switch(flag)
     {
         case ACT_COMMAND:                                   //0x07
+            // Maybe exists some flag that disable it at client side
+            if (GUID_HIPART(guid1) == HIGHGUID_VEHICLE)
+                return;
+
             switch(spellid)
             {
                 case COMMAND_STAY:                          //flat=1792  //STAY

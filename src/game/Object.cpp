@@ -111,13 +111,12 @@ void Object::_InitValues()
     m_objectUpdated = false;
 }
 
-void Object::_Create( uint32 guidlow, uint32 entry, HighGuid guidhigh )
+void Object::_Create(ObjectGuid guid)
 {
     if(!m_uint32Values)
         _InitValues();
 
-    uint64 guid = MAKE_NEW_GUID(guidlow, entry, guidhigh);
-    SetUInt64Value(OBJECT_FIELD_GUID, guid);
+	SetGuidValue(OBJECT_FIELD_GUID, guid);
     SetUInt32Value(OBJECT_FIELD_TYPE, m_objectType);
     m_PackGUID.Set(guid);
 }
@@ -1116,9 +1115,9 @@ void WorldObject::CleanupsBeforeDelete()
     RemoveFromWorld();
 }
 
-void WorldObject::_Create( uint32 guidlow, HighGuid guidhigh, uint32 phaseMask )
+void WorldObject::_Create(ObjectGuid guid, uint32 phaseMask)
 {
-    Object::_Create(guidlow, 0, guidhigh);
+    Object::_Create(guid);
     m_phaseMask = phaseMask;
 }
 

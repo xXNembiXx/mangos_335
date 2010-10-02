@@ -653,12 +653,35 @@ bool Creature::AIM_Initialize()
 
 bool Creature::Create(uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, uint32 team, const CreatureData *data)
 {
+    CreatureInfo const *cinfo = sObjectMgr.GetCreatureTemplate(Entry);
+
+    if (!cinfo)
+    {
+        sLog.outErrorDb("Creature entry %u does not exist.", Entry);
+        return false;
+    }
+
     ASSERT(map);
+
+    if (map->GetInstanceId() == 0)
+    {
+        // Creature can be loaded already in map if grid has been unloaded while creature walk to another grid
+        // FIXME: until creature guids is global and for instances used dynamic generated guids
+        // in instance possible load creature duplicates with same DB guid but different in game guids
+        // This will be until implementing per-map creature guids
+        if (map->GetCreature(ObjectGuid(HIGHGUID_UNIT, Entry, guidlow)))
+            return false;
+    }
+    else
+        guidlow = sObjectMgr.GenerateLowGuid(HIGHGUID_UNIT);
+
+    ObjectGuid guid(HIGHGUID_UNIT, Entry, guidlow);
+
     SetMap(map);
     SetPhaseMask(phaseMask,false);
 
     //oX = x;     oY = y;    dX = x;    dY = y;    m_moveTime = 0;    m_startMove = 0;
-    const bool bResult = CreateFromProto(guidlow, Entry, team, data);
+    const bool bResult = CreateFromProto(guid, Entry, team, data);
 
     if (bResult)
     {
@@ -1085,17 +1108,11 @@ float Creature::GetSpellDamageMod(int32 Rank)
     }
 }
 
-bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const CreatureData *data)
+bool Creature::CreateFromProto(ObjectGuid guid, uint32 Entry, uint32 team, const CreatureData *data)
 {
-    CreatureInfo const *cinfo = ObjectMgr::GetCreatureTemplate(Entry);
-    if(!cinfo)
-    {
-        sLog.outErrorDb("Creature entry %u does not exist.", Entry);
-        return false;
-    }
     m_originalEntry = Entry;
 
-    Object::_Create(guidlow, Entry, HIGHGUID_UNIT);
+    Object::_Create(guid);
 
     if (!UpdateEntry(Entry, team, data, false))
         return false;
@@ -1114,17 +1131,6 @@ bool Creature::LoadFromDB(uint32 guid, Map *map)
     }
 
     m_DBTableGuid = guid;
-    if (map->GetInstanceId() == 0)
-    {
-        // Creature can be loaded already in map if grid has been unloaded while creature walk to another grid
-        // FIXME: until creature guids is global and for instances used dynamic generated guids
-        // in instance possible load creature duplicates with same DB guid but different in game guids
-        // This will be until implementing per-map creature guids
-        if (map->GetCreature(MAKE_NEW_GUID(guid, data->id, HIGHGUID_UNIT)))
-            return false;
-    }
-    else
-        guid = sObjectMgr.GenerateLowGuid(HIGHGUID_UNIT);
 
     uint16 team = 0;
     if(!Create(guid, map, data->phaseMask, data->id, team, data))

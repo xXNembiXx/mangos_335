@@ -142,6 +142,29 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         seatInfo->m_attachmentOffsetX, seatInfo->m_attachmentOffsetY, seatInfo->m_attachmentOffsetZ,
         seatInfo->m_passengerYaw, getMSTime(), seat->first, seatInfo);
 
+    if (seatInfo->m_flags & SEAT_FLAG_MAIN_RIDER)
+    {
+        passenger->SetCharm(m_pBase);
+        m_pBase->SetCharmerGUID(passenger->GetGUID());
+        m_pBase->addUnitState(UNIT_STAT_CONTROLLED);
+
+        if (passenger->GetTypeId() == TYPEID_PLAYER)
+        {
+            m_pBase->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+
+            if (CharmInfo* charmInfo = m_pBase->InitCharmInfo(m_pBase))
+            {
+                charmInfo->InitVehicleCreateSpells();
+                charmInfo->SetReactState(REACT_PASSIVE);
+            }
+
+            Player* player = (Player*)passenger;
+            player->SetMover(m_pBase);
+            player->SetClientControl(m_pBase, 1);
+            player->VehicleSpellInitialize();
+        }
+    }
+
     if (passenger->GetTypeId() == TYPEID_PLAYER)
     {
         ((Player*)passenger)->GetCamera().SetView(m_pBase);
@@ -178,6 +201,23 @@ void VehicleKit::RemovePassenger(Unit *passenger)
 
     passenger->m_movementInfo.ClearTransportData();
     passenger->m_movementInfo.RemoveMovementFlag(MOVEFLAG_ONTRANSPORT);
+
+    if (seat->second.seatInfo->m_flags & SEAT_FLAG_MAIN_RIDER)
+    {
+        passenger->SetCharm(NULL);
+        passenger->RemoveSpellsCausingAura(SPELL_AURA_CONTROL_VEHICLE);
+        m_pBase->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+        m_pBase->SetCharmerGUID(NULL);
+        m_pBase->clearUnitState(UNIT_STAT_CONTROLLED);
+
+        if (passenger->GetTypeId() == TYPEID_PLAYER)
+        {
+            Player* player = (Player*)passenger;
+            player->SetMover(NULL);
+            player->SetClientControl(m_pBase, 0);
+            player->RemovePetActionBar();
+        }
+    }
 
     if (passenger->GetTypeId() == TYPEID_PLAYER)
     {

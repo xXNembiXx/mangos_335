@@ -18150,6 +18150,59 @@ void Player::PossessSpellInitialize()
     GetSession()->SendPacket(&data);
 }
 
+void Player::VehicleSpellInitialize()
+{
+    Creature* charm = (Creature*)GetCharm();
+
+    if (!charm)
+        return;
+
+    CharmInfo *charmInfo = charm->GetCharmInfo();
+
+    if (!charmInfo)
+    {
+        sLog.outError("Player::VehicleSpellInitialize(): vehicle (GUID: %u) has no charminfo!", charm->GetGUIDLow());
+        return;
+    }
+
+    size_t cooldownsCount = charm->m_CreatureSpellCooldowns.size() + charm->m_CreatureCategoryCooldowns.size();
+
+    WorldPacket data(SMSG_PET_SPELLS, 8+2+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+1+cooldownsCount*(4+2+4+4));
+    data << charm->GetObjectGuid();
+    data << uint16(0);
+    data << uint32(0);
+    data << uint32(0x08000101);                             // react state
+
+    charmInfo->BuildActionBar(&data);
+
+    data << uint8(0);                                       // additional spells count
+    data << uint8(cooldownsCount);
+
+    time_t curTime = time(NULL);
+
+    for (CreatureSpellCooldowns::const_iterator itr = charm->m_CreatureSpellCooldowns.begin(); itr != charm->m_CreatureSpellCooldowns.end(); ++itr)
+    {
+        time_t cooldown = (itr->second > curTime) ? (itr->second - curTime) * IN_MILLISECONDS : 0;
+
+        data << uint32(itr->first);                         // spellid
+        data << uint16(0);                                  // spell category?
+        data << uint32(cooldown);                           // cooldown
+        data << uint32(0);                                  // category cooldown
+    }
+
+    for (CreatureSpellCooldowns::const_iterator itr = charm->m_CreatureCategoryCooldowns.begin(); itr != charm->m_CreatureCategoryCooldowns.end(); ++itr)
+    {
+        time_t cooldown = (itr->second > curTime) ? (itr->second - curTime) * IN_MILLISECONDS : 0;
+
+        data << uint32(itr->first);                         // spellid
+        data << uint16(0);                                  // spell category?
+        data << uint32(0);                                  // cooldown
+        data << uint32(cooldown);                           // category cooldown
+    }
+
+    GetSession()->SendPacket(&data);
+}
+
 void Player::CharmSpellInitialize()
 {
     Unit* charm = GetCharm();

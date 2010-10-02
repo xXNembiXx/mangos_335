@@ -13285,6 +13285,25 @@ void CharmInfo::InitPossessCreateSpells()
     }
 }
 
+void CharmInfo::InitVehicleCreateSpells()
+{
+    for (uint32 x = ACTION_BAR_INDEX_START; x < ACTION_BAR_INDEX_END; ++x)
+        SetActionBar(x, 0, ActiveStates(0x8 + x));
+
+    for (uint32 x = 0; x < CREATURE_MAX_SPELLS; ++x)
+    {
+        uint32 spellId = ((Creature*)m_unit)->m_spells[x];
+
+        if (!spellId)
+            continue;
+
+        if (IsPassiveSpell(spellId))
+            m_unit->CastSpell(m_unit, spellId, true);
+        else
+            PetActionBar[x].SetAction(spellId);
+    }
+}
+
 void CharmInfo::InitCharmCreateSpells()
 {
     if(m_unit->GetTypeId() == TYPEID_PLAYER)                //charmed players don't have spells

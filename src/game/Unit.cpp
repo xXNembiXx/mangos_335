@@ -483,6 +483,39 @@ void Unit::SendMonsterMoveTransport(WorldObject *transport, SplineType type, Spl
     SendMessageToSet(&data, true);
 }
 
+bool Unit::SetPosition(float x, float y, float z, float orientation, bool teleport)
+{
+    // prevent crash when a bad coord is sent by the client
+    if (!MaNGOS::IsValidMapCoord(x, y, z, orientation))
+    {
+        DEBUG_LOG("Unit::SetPosition(%f, %f, %f, %f, %d) .. bad coordinates for unit %d!", x, y, z, orientation, teleport, GetGUIDLow());
+        return false;
+    }
+
+    bool turn = GetOrientation() != orientation;
+    bool relocate = (teleport || GetPositionX() != x || GetPositionY() != y || GetPositionZ() != z);
+
+    if (turn)
+        RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TURNING);
+
+    if (relocate)
+    {
+        RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOVE);
+
+        if (GetTypeId() == TYPEID_PLAYER)
+            GetMap()->PlayerRelocation((Player*)this, x, y, z, orientation);
+        else
+            GetMap()->CreatureRelocation((Creature*)this, x, y, z, orientation);
+    }
+    else if (turn)
+        SetOrientation(orientation);
+
+    if ((relocate || turn) && GetVehicleKit())
+        GetVehicleKit()->RelocatePassengers(x, y, z, orientation);
+
+    return relocate || turn;
+}
+
 void Unit::BuildHeartBeatMsg(WorldPacket *data) const
 {
     MovementFlags move_flags = GetTypeId()==TYPEID_PLAYER
@@ -14603,7 +14636,7 @@ void Unit::NearTeleportTo( float x, float y, float z, float orientation, bool ca
             if (MovementGenerator *movgen = c->GetMotionMaster()->top())
                 movgen->Interrupt(*c);
 
-        GetMap()->CreatureRelocation((Creature*)this, x, y, z, orientation);
+        SetPosition(x, y, z, orientation, true);
 
         WorldPacket data;
         BuildHeartBeatMsg(&data);

@@ -6162,46 +6162,18 @@ ActionButton const* Player::GetActionButton(uint8 button)
 
 bool Player::SetPosition(float x, float y, float z, float orientation, bool teleport)
 {
-    // prevent crash when a bad coord is sent by the client
-    if(!MaNGOS::IsValidMapCoord(x,y,z,orientation))
-    {
-        DEBUG_LOG("Player::SetPosition(%f, %f, %f, %f, %d) .. bad coordinates for player %d!",x,y,z,orientation,teleport,GetGUIDLow());
+	if(!Unit::SetPosition(x, y, z, orientation, teleport))
         return false;
-    }
 
-    Map *m = GetMap();
+    // group update
+    if(GetGroup())
+        SetGroupUpdateFlag(GROUP_UPDATE_FLAG_POSITION);
 
-    const float old_x = GetPositionX();
-    const float old_y = GetPositionY();
-    const float old_z = GetPositionZ();
-    const float old_r = GetOrientation();
-
-    if( teleport || old_x != x || old_y != y || old_z != z || old_r != orientation )
-    {
-        if (teleport || old_x != x || old_y != y || old_z != z)
-            RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_TURNING);
-        else
-            RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TURNING);
-
-        // move and update visible state if need
-        m->PlayerRelocation(this, x, y, z, orientation);
-
-        // reread after Map::Relocation
-        m = GetMap();
-        x = GetPositionX();
-        y = GetPositionY();
-        z = GetPositionZ();
-
-        // group update
-        if (GetGroup() && (old_x != x || old_y != y))
-            SetGroupUpdateFlag(GROUP_UPDATE_FLAG_POSITION);
-
-        if (GetTrader() && !IsWithinDistInMap(GetTrader(), INTERACTION_DISTANCE))
-            GetSession()->SendCancelTrade();   // will clode both side trade windows
-    }
+    if (GetTrader() && !IsWithinDistInMap(GetTrader(), INTERACTION_DISTANCE))
+        GetSession()->SendCancelTrade();   // will clode both side trade windows
 
     // code block for underwater state update
-    UpdateUnderwaterState(m, x, y, z);
+    UpdateUnderwaterState(GetMap(), x, y, z);
 
     CheckAreaExploreAndOutdoor();
 

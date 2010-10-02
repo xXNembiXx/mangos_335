@@ -22439,10 +22439,6 @@ Object* Player::GetObjectByTypeMask(ObjectGuid guid, TypeMask typemask)
             if ((typemask & TYPEMASK_UNIT) && IsInWorld())
                 return GetMap()->GetPet(guid);
             break;
-        case HIGHGUID_VEHICLE:
-            if ((typemask & TYPEMASK_UNIT) && IsInWorld())
-                return GetMap()->GetVehicle(guid);
-            break;
         case HIGHGUID_DYNAMICOBJECT:
             if ((typemask & TYPEMASK_DYNAMICOBJECT) && IsInWorld())
                 return GetMap()->GetDynamicObject(guid);

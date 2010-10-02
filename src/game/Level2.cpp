@@ -1406,7 +1406,7 @@ bool ChatHandler::HandleNpcDeleteCommand(const char* args)
     else
         unit = getSelectedCreature();
 
-    if (!unit || unit->isPet() || unit->isTotem() || unit->isVehicle())
+    if (!unit || unit->isPet() || unit->isTotem())
     {
         SendSysMessage(LANG_SELECT_CREATURE);
         SetSentErrorMessage(true);

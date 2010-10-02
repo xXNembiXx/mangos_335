@@ -49,7 +49,6 @@ class PlayerMenu;
 class UpdateMask;
 class SpellCastTargets;
 class PlayerSocial;
-class Vehicle;
 class InstanceSave;
 class Spell;
 class Item;

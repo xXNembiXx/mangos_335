@@ -242,7 +242,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         void RemoveFromActive(WorldObject* obj);
 
         Creature* GetCreature(ObjectGuid guid);
-        Vehicle* GetVehicle(ObjectGuid guid);
         Pet* GetPet(ObjectGuid guid);
         Creature* GetCreatureOrPetOrVehicle(ObjectGuid guid);
         GameObject* GetGameObject(ObjectGuid guid);
@@ -346,7 +345,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::Obj
         // Map local low guid counters
         ObjectGuidGenerator<HIGHGUID_DYNAMICOBJECT> m_DynObjectGuids;
         ObjectGuidGenerator<HIGHGUID_PET> m_PetGuids;
-        ObjectGuidGenerator<HIGHGUID_VEHICLE> m_VehicleGuids;
 
         // Type specific code for add/remove to/from grid
         template<class T>

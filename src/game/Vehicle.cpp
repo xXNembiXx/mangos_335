@@ -214,7 +214,7 @@ void VehicleKit::RemovePassenger(Unit *passenger)
         passenger->SetCharm(NULL);
         passenger->RemoveSpellsCausingAura(SPELL_AURA_CONTROL_VEHICLE);
 
-        m_pBase->SetCharmerGUID(0)
+        m_pBase->SetCharmerGUID(0);
         m_pBase->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
         m_pBase->clearUnitState(UNIT_STAT_CONTROLLED);
 

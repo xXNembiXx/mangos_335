@@ -269,15 +269,17 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         }
 
         // if we boarded a transport, add us to it
-        if (plMover && !plMover->m_transport)
+        if (plMover && !plMover->GetTransport())
         {
             // elevators also cause the client to send MOVEFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
             for (MapManager::TransportSet::const_iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
             {
-                if ((*iter)->GetObjectGuid() == movementInfo.GetTransportGuid())
+                Transport* transport = *iter;
+
+                if (transport->GetObjectGuid() == movementInfo.GetTransportGuid())
                 {
-                    plMover->m_transport = (*iter);
-                    (*iter)->AddPassenger(plMover);
+                    plMover->SetTransport(transport);
+                    transport->AddPassenger(plMover);
 
                     if (plMover->GetVehicleKit())
                         plMover->GetVehicleKit()->RemoveAllPassengers();
@@ -287,10 +289,10 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             }
         }
     }
-    else if (plMover && plMover->m_transport)               // if we were on a transport, leave
+    else if (plMover && plMover->GetTransport())            // if we were on a transport, leave
     {
-        plMover->m_transport->RemovePassenger(plMover);
-        plMover->m_transport = NULL;
+        plMover->GetTransport()->RemovePassenger(plMover);
+        plMover->SetTransport(NULL);
         movementInfo.ClearTransportData();
     }
 

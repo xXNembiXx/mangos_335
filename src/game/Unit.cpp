@@ -49,6 +49,7 @@
 #include "Vehicle.h"
 #include "VMapFactory.h"
 #include "MovementGenerator.h"
+#include "Transports.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -258,6 +259,7 @@ Unit::Unit()
     for(int i=0; i < MAX_REACTIVE; ++i)
         m_reactiveTimer[i] = 0;
 
+    m_transport = NULL;
     m_pVehicle = NULL;
     m_pVehicleKit = NULL;
 }

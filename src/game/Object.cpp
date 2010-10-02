@@ -296,11 +296,6 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
             {
                 Player *player = ((Player*)unit);
 
-                if(player->GetTransport() || unit->GetVehicle())
-                    player->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
-                else
-                    player->m_movementInfo.RemoveMovementFlag(MOVEFLAG_ONTRANSPORT);
-
                 // remove unknown, unused etc flags for now
                 player->m_movementInfo.RemoveMovementFlag(MOVEFLAG_SPLINE_ENABLED);
 
@@ -313,6 +308,11 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
             }
             break;
         }
+
+        if (unit->GetTransport() || unit->GetVehicle())
+            unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
+        else
+            unit->m_movementInfo.RemoveMovementFlag(MOVEFLAG_ONTRANSPORT);
 
         // Update movement info time
         unit->m_movementInfo.UpdateTime(getMSTime());

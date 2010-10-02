@@ -474,7 +474,7 @@ void WorldSession::HandleMoveNotActiveMover(WorldPacket &recv_data)
 
 void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
 {
-    DEBUG_LOG("WORLD: Recvd CMSG_DISMISS_CONTROLLED_VEHICLE");
+    DEBUG_LOG("WORLD: Received CMSG_DISMISS_CONTROLLED_VEHICLE");
     recv_data.hexlike();
 
     ObjectGuid guid;
@@ -492,31 +492,28 @@ void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
 
 void WorldSession::HandleRequestVehicleExit(WorldPacket &recv_data)
 {
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_EXIT");
-    recv_data.hexlike();
+	DEBUG_LOG("WORLD: Received CMSG_REQUEST_VEHICLE_EXIT");
 
     GetPlayer()->ExitVehicle();
 }
 
 void WorldSession::HandleRequestVehiclePrevSeat(WorldPacket &recv_data)
 {
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_PREV_SEAT");
-    recv_data.hexlike();
+    DEBUG_LOG("WORLD: Received CMSG_REQUEST_VEHICLE_PREV_SEAT");
 
     GetPlayer()->ChangeSeat(-1, false);
 }
 
 void WorldSession::HandleRequestVehicleNextSeat(WorldPacket &recv_data)
 {
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_NEXT_SEAT");
-    recv_data.hexlike();
+    DEBUG_LOG("WORLD: Received CMSG_REQUEST_VEHICLE_NEXT_SEAT");
 
     GetPlayer()->ChangeSeat(-1, true);
 }
 
 void WorldSession::HandleRequestVehicleSwitchSeat(WorldPacket &recv_data)
 {
-    DEBUG_LOG("WORLD: Recvd CMSG_REQUEST_VEHICLE_SWITCH_SEAT");
+    DEBUG_LOG("WORLD: Received CMSG_REQUEST_VEHICLE_SWITCH_SEAT");
     recv_data.hexlike();
 
     ObjectGuid guid;
@@ -536,7 +533,7 @@ void WorldSession::HandleRequestVehicleSwitchSeat(WorldPacket &recv_data)
 
 void WorldSession::HandleEnterPlayerVehicle(WorldPacket &recv_data)
 {
-    DEBUG_LOG("WORLD: Recvd CMSG_PLAYER_VEHICLE_ENTER");
+    DEBUG_LOG("WORLD: Received CMSG_PLAYER_VEHICLE_ENTER");
     recv_data.hexlike();
 
     ObjectGuid guid;
@@ -562,13 +559,13 @@ void WorldSession::HandleEnterPlayerVehicle(WorldPacket &recv_data)
 
 void WorldSession::HandleEjectPasenger(WorldPacket &recv_data)
 {
-    DEBUG_LOG("WORLD: Recvd CMSG_EJECT_PASSENGER");
+    DEBUG_LOG("WORLD: Received CMSG_EJECT_PASSENGER");
     recv_data.hexlike();
 
     ObjectGuid guid;
     recv_data >> guid;
 
-    Player* passenger = sObjectMgr.GetPlayer(guid);
+    Unit* passenger = ObjectAccessor::GetUnit(*GetPlayer(), guid);
 
     if (!passenger)
         return;

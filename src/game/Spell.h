@@ -253,6 +253,7 @@ class Spell
         void EffectProficiency(SpellEffectIndex eff_idx);
         void EffectApplyAreaAura(SpellEffectIndex eff_idx);
         void EffectSummonType(SpellEffectIndex eff_idx);
+        void EffectSummonPossessed(SpellEffectIndex eff_idx);
         void EffectLearnSpell(SpellEffectIndex eff_idx);
         void EffectDispel(SpellEffectIndex eff_idx);
         void EffectDualWield(SpellEffectIndex eff_idx);
@@ -393,6 +394,7 @@ class Spell
 
         typedef std::list<Unit*> UnitList;
         void FillTargetMap();
+		bool FillCustomTargetMap(uint32 i, UnitList &targetUnitMap); 
         void SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList &targetUnitMap);
 
         void FillAreaTargets(UnitList &targetUnitMap, float x, float y, float radius, SpellNotifyPushType pushType, SpellTargets spellTargets, WorldObject* originalCaster = NULL);

@@ -221,6 +221,10 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
         default:
             sLog.outError("Pet have incorrect type (%u) for pet loading.", getPetType());
     }
+	
+	if(GetEntry() == 26125) // Death Knight's Ghoul
+		setPowerType(POWER_ENERGY);
+
 
     if(owner->IsPvP())
         SetPvP(true);
@@ -474,6 +478,20 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
 
             SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
         }
+		// send cooldown for summon spell if necessary
+        if (Player* p_owner = GetCharmerOrOwnerPlayerOrPlayerItself())
+        {
+            SpellEntry const *spellInfo = sSpellStore.LookupEntry(GetUInt32Value(UNIT_CREATED_BY_SPELL));
+
+            if (!spellInfo) return;
+
+            if (spellInfo->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE)
+                p_owner->SendCooldownEvent(spellInfo);
+            // Raise Dead hack
+            if (spellInfo->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT && spellInfo->SpellFamilyFlags & 0x1000)
+                if (spellInfo = sSpellStore.LookupEntry(46584))
+                    p_owner->SendCooldownEvent(spellInfo);
+        }
     }
     else if(getDeathState()==ALIVE)
     {
@@ -484,7 +502,7 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
 
 void Pet::Update(uint32 diff)
 {
-    if(m_removed)                                           // pet already removed, just wait in remove queue, no updates
+    if(m_removed || m_loading)                               // pet already removed, just wait in remove queue, no updates
         return;
 
     switch( m_deathState )

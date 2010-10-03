@@ -297,7 +297,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleComprehendLanguage,                        //244 SPELL_AURA_COMPREHEND_LANGUAGE
     &Aura::HandleNoImmediateEffect,                         //245 SPELL_AURA_MOD_DURATION_OF_MAGIC_EFFECTS     implemented in Unit::CalculateSpellDuration
     &Aura::HandleNoImmediateEffect,                         //246 SPELL_AURA_MOD_DURATION_OF_EFFECTS_BY_DISPEL implemented in Unit::CalculateSpellDuration
-    &Aura::HandleNULL,                                      //247 target to become a clone of the caster
+    &Aura::HandleAuraCloneCaster,                           //247 SPELL_AURA_CLONE_CASTER
     &Aura::HandleNoImmediateEffect,                         //248 SPELL_AURA_MOD_COMBAT_RESULT_CHANCE         implemented in Unit::RollMeleeOutcomeAgainst
     &Aura::HandleAuraConvertRune,                           //249 SPELL_AURA_CONVERT_RUNE
     &Aura::HandleAuraModIncreaseHealth,                     //250 SPELL_AURA_MOD_INCREASE_HEALTH_2
@@ -2106,7 +2106,12 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     case 75614:                             // Celestial Steed
                         Spell::SelectMountByAreaAndSkill(target, 75619, 75620, 75617, 75618, 76153);
                         return;
-                }
+                    case 72350:                             // Fury of Frostmourne
+                        if (GetEffIndex() == EFFECT_INDEX_0)
+                            if (Unit* caster = GetCaster())
+                                caster->CastSpell(caster, 72351, true);
+						return;
+					}
                 break;
             }
             case SPELLFAMILY_WARRIOR:
@@ -2344,6 +2349,9 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 }
                 return;
             }
+            case 68839:                                     // Corrupt Soul
+                target->CastSpell(target, 68846, true, NULL, this);
+                return;
         }
 
         // Living Bomb
@@ -2921,6 +2929,9 @@ void Aura::HandleAuraModShapeshift(bool apply, bool Real)
         // horde modelid should be used at shapeshifting
         if (target->GetTypeId() != TYPEID_PLAYER)
             modelid = ssEntry->modelID_A;
+        else 
+            modelid = target->GetModelForForm(form);
+        /*
         else
         {
             // players are a bit different since the dbc has seldomly an horde modelid
@@ -2935,7 +2946,7 @@ void Aura::HandleAuraModShapeshift(bool apply, bool Real)
             // nothing found in above, so use default
             if (!modelid)
                 modelid = ssEntry->modelID_A;
-        }
+        }*/
     }
 
     // now only powertype must be set
@@ -5034,6 +5045,10 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
         // Parasitic Shadowfiend - handle summoning of two Shadowfiends on DoT expire
         if(spellProto->Id == 41917)
             target->CastSpell(target, 41915, true);
+        else if (spellProto->Id == 74562) // SPELL_FIERY_COMBUSTION - Ruby sanctum boss Halion
+            target->CastSpell(target, 74607, true, NULL, NULL, GetCasterGUID());
+        else if (spellProto->Id == 74792) // SPELL_SOUL_CONSUMPTION - Ruby sanctum boss Halion
+            target->CastSpell(target, 74799, true, NULL, NULL, GetCasterGUID());
     }
 }
 
@@ -6637,6 +6652,28 @@ void Aura::PeriodicTick()
                         }
                         break;
                     }
+                    case 70541:
+                    case 73779:
+                    case 73780:
+                    case 73781:
+                    {
+                        if(target->GetHealth() >= target->GetMaxHealth() * 0.9 )
+                        {
+                            target->RemoveAurasDueToSpell(GetId());
+                            return;
+                        }
+                        break;
+                    }
+                    case 74562: // SPELL_FIERY_COMBUSTION - Ruby sanctum boss Halion, added mark (74567, dummy) every tick
+                    {
+                        target->CastSpell(target, 74567, true, NULL, NULL, GetCasterGUID());
+                        break;
+                    }
+                    case 74792: // SPELL_SOUL_CONSUMPTION - Ruby sanctum boss Halion, added mark (74795, dummy) every tick
+                    {
+                        target->CastSpell(target, 74795, true, NULL, NULL, GetCasterGUID());
+                        break;
+                    };
                     default:
                         break;
                 }
@@ -7466,9 +7503,23 @@ void Aura::PeriodicDummyTick()
         }
         case SPELLFAMILY_MAGE:
         {
-            // Mirror Image
-//            if (spell->Id == 55342)
-//                return;
+			if (spell->Id == 55342)
+			{
+				// Set clone caster 
+				if (Unit *caster = GetCaster())	
+				{
+					GuardianPetList const& guardians = caster->GetGuardians();
+
+					for(GuardianPetList::const_iterator itr = guardians.begin(); itr != guardians.end(); ++itr)
+						if(Unit* unit = ObjectAccessor::GetUnit(*caster, *itr))
+							if(unit->GetOwnerGUID()==caster->GetGUID() && unit->GetEntry()==31216)	
+							{					
+								caster->CastSpell(unit, 45204, true);			                		
+								caster->CastSpell(unit, 69837, true);
+							}
+				}		                
+				m_isPeriodic = false;
+			}
             break;
         }
         case SPELLFAMILY_DRUID:
@@ -7851,6 +7902,12 @@ void Aura::HandlePhase(bool apply, bool Real)
     }
 
     // no-phase is also phase state so same code for apply and remove
+    uint32 phase;
+
+    if(GetSpellProto()->Id == 51852)
+        phase = apply ? (target->GetPhaseMask() | GetMiscValue()) : (target->GetPhaseMask() & ~GetMiscValue());
+    else
+        phase = apply ? GetMiscValue() : PHASEMASK_NORMAL;
 
     // phase auras normally not expected at BG but anyway better check
     if(target->GetTypeId() == TYPEID_PLAYER)
@@ -7862,9 +7919,9 @@ void Aura::HandlePhase(bool apply, bool Real)
 
         // GM-mode have mask 0xFFFFFFFF
         if(!((Player*)target)->isGameMaster())
-            target->SetPhaseMask(apply ? GetMiscValue() : PHASEMASK_NORMAL, false);
+            target->SetPhaseMask(phase, false);
 
-        ((Player*)target)->GetSession()->SendSetPhaseShift(apply ? GetMiscValue() : PHASEMASK_NORMAL);
+        ((Player*)target)->GetSession()->SendSetPhaseShift(phase);
 
         if (GetEffIndex() == EFFECT_INDEX_0)
         {
@@ -7888,9 +7945,15 @@ void Aura::HandlePhase(bool apply, bool Real)
                 }
             }
         }
+
+        if(target->GetCharm() && !apply) //remove other auras from charm on unapply
+        {
+            Creature * creat=((Creature*)target->GetCharm());
+            creat->RemoveAurasDueToSpellByCancel(GetId());
+        }
     }
     else
-        target->SetPhaseMask(apply ? GetMiscValue() : PHASEMASK_NORMAL, false);
+        target->SetPhaseMask(phase, false);
 
     // need triggering visibility update base at phase update of not GM invisible (other GMs anyway see in any phases)
     if(target->GetVisibility() != VISIBILITY_OFF)
@@ -9217,5 +9280,37 @@ void SpellAuraHolder::UnregisterSingleCastHolder()
             caster->GetSingleCastSpellTargets().erase(GetSpellProto());
 
         m_isSingleTarget = false;
+    }
+}
+
+void Aura::HandleAuraCloneCaster(bool Apply, bool Real)
+{
+    if (!Real)	
+        return;
+
+    Unit* target = GetTarget();
+
+    if (Apply)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        target->SetDisplayId(caster->GetDisplayId());        
+
+        target->SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, DEFAULT_WORLD_OBJECT_SIZE);
+        target->SetFloatValue(UNIT_FIELD_COMBATREACH, 1.5f);
+        target->SetUInt32Value(UNIT_FIELD_BYTES_2,caster->GetUInt32Value(UNIT_FIELD_BYTES_2));
+	target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONE_CASTER);
+
+	target->SetMaxHealth(caster->GetMaxHealth());
+        target->SetHealth(caster->GetHealth());
+        target->SetMaxPower(POWER_MANA, caster->GetMaxPower(POWER_MANA));
+        target->SetPower(POWER_MANA, caster->GetPower(POWER_MANA));
+    }
+    else
+    {
+        target->SetDisplayId(target->GetNativeDisplayId());
+        target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONE_CASTER);
     }
 }

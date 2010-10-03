@@ -381,6 +381,39 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 67485:
                         damage += uint32(0.5f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                         break;
+					// Defile damage depending from scale.
+                    case 72754:
+                    case 73708:
+                    case 73709:
+                    case 73710:
+                        damage = damage * m_caster->GetObjectScale();
+                        break;
+                    case 74607:
+                    // SPELL_FIERY_COMBUSTION_EXPLODE - Ruby sanctum boss Halion,
+                    // damage proportional number of mark (74567, dummy)
+                    {
+                        if (Aura* aura = m_caster->GetAura(74567, EFFECT_INDEX_0))
+                        {
+                            if (aura->GetStackAmount() > 0)
+                                damage = 1000 * aura->GetStackAmount();
+                            m_caster->RemoveAurasDueToSpell(74567);
+                        }
+                        else damage = 0;
+                        break;
+                    }
+                    case 74799:
+                    // SPELL_SOUL_CONSUMPTION_EXPLODE - Ruby sanctum boss Halion,
+                    // damage proportional number of mark (74795, dummy)
+                    {
+                        if (Aura* aura = m_caster->GetAura(74795, EFFECT_INDEX_0))
+                        {
+                            if (aura->GetStackAmount() > 0)
+                                damage = 1000 * aura->GetStackAmount();
+                            m_caster->RemoveAurasDueToSpell(74795);
+                        }
+                        else damage = 0;
+                        break;
+                    }
                 }
                 break;
             }
@@ -1568,6 +1601,14 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     ((Creature*)unitTarget)->ForcedDespawn(5000);
                     return;
                 }
+                case 51858:                                 // Siphon of Acherus - Complete Quest
+                {
+                    if (!m_caster || !m_caster->isAlive())
+                        return;
+
+                    ((Player*)m_originalCaster->GetCharmer())->KilledMonsterCredit(m_caster->GetEntry(), m_caster->GetGUID());
+                        return;
+                }
                 case 51866:                                 // Kick Nass
                 {
                     // It is possible that Nass Heartbeat (spell id 61438) is involved in this
@@ -2620,6 +2661,48 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 // consume diseases
                 unitTarget->RemoveAurasWithDispelType(DISPEL_DISEASE, m_caster->GetGUID());
             }
+			// Raise dead effect
+			else if(m_spellInfo->Id == 46584) 
+            {
+                if (m_caster->GetTypeId() != TYPEID_PLAYER)
+                    return;
+                // We can have a summoned pet/guardian only in 2 cases:
+                // 1. It was summoned from corpse in EffectScriptEffect.
+                if (getState() == SPELL_STATE_FINISHED)
+                    return;
+                // 2. Cooldown of Raise Dead is finished and we want to repeat the cast with active pet.
+                if (((Player*)m_caster)->GetPet())
+                {
+                    ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id,true);
+                    SendCastResult(SPELL_FAILED_ALREADY_HAVE_SUMMON);
+                    return;
+                }
+                // We will get here ONLY if we have no corpse.
+                bool allow_cast = false;
+                // We do not need any reagent if we have Glyph of Raise Dead.
+                if (m_caster->HasAura(60200))
+                    allow_cast = true;
+                else
+                    // We need Corpse Dust to cast a spell.
+                    if (((Player*)m_caster)->HasItemCount(37201,1))
+                    {
+                        ((Player*)m_caster)->DestroyItemCount(37201,1,true);
+                        allow_cast = true;
+                    }
+                if (allow_cast)
+                {
+                    if (m_caster->HasSpell(52143))
+                        m_caster->CastSpell(m_caster,52150,true);
+                    else
+                        m_caster->CastSpell(m_caster,46585,true);
+                }
+                else
+                {
+                    ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id,true);
+                    SendCastResult(SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW);
+                }
+                return;
+            }
             break;
         }
     }
@@ -2786,6 +2869,14 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
                 pet->CastSpell(pet, 28305, true);
             return;
         }
+		// Mirror Image
+		case 58832:
+		{
+			// Glyph of Mirror Image
+			if (m_caster->HasAura(63093))
+				m_caster->CastSpell(m_caster, 65047, true); // Mirror Image 	
+			break;        
+		}
         // Empower Rune Weapon
         case 53258:
         {
@@ -4002,6 +4093,8 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
                     //SUMMON_TYPE_TOTEM2 = 647: 52893, Anti-Magic Zone (npc used)
                     if(prop_id == 121 || prop_id == 647)
                         DoSummonTotem(eff_idx);
+					else if (prop_id == 1021)
+						DoSummonGuardian(eff_idx, summon_prop->FactionId);
                     else
                         DoSummonWild(eff_idx, summon_prop->FactionId);
                     break;
@@ -4056,9 +4149,16 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
         }
         case SUMMON_PROP_GROUP_CONTROLLABLE:
         {
-            // no type here
-            // maybe wrong - but thats the handler currently used for those
-            DoSummonGuardian(eff_idx, summon_prop->FactionId);
+            switch(prop_id)
+            {
+                case 65:
+                case 428:
+                    EffectSummonPossessed(eff_idx);
+                    break;
+                default:
+                    DoSummonGuardian(eff_idx, summon_prop->FactionId);
+                break;
+            }
             break;
         }
         case SUMMON_PROP_GROUP_VEHICLE:
@@ -4187,6 +4287,54 @@ void Spell::DoSummon(SpellEffectIndex eff_idx)
 
     if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
         ((Creature*)m_caster)->AI()->JustSummoned((Creature*)spawnCreature);
+}
+
+void Spell::EffectSummonPossessed(SpellEffectIndex eff_idx)
+{
+    uint32 creature_entry = m_spellInfo->EffectMiscValue[eff_idx];
+    if(!creature_entry)
+        return;
+
+    int32 duration = GetSpellDuration(m_spellInfo);
+
+        float px, py, pz;
+    // If dest location if present
+    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    {
+        // Summon 1 unit in dest location
+        px = m_targets.m_destX;
+        py = m_targets.m_destY;
+        pz = m_targets.m_destZ;
+    }
+    // Summon if dest location not present near caster
+    else
+        m_caster->GetClosePoint(px,py,pz,1.0f);
+
+    TempSummonType summonType = (duration == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_OR_DEAD_DESPAWN;
+    Creature *summon = m_caster->SummonCreature(creature_entry,px,py,pz,m_caster->GetOrientation(),summonType,duration);
+
+    summon->addUnitState(UNIT_STAT_CONTROLLED);
+    summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+    summon->SetCharmerGUID(m_caster->GetGUID());
+    summon->setFaction(m_caster->getFaction());
+
+    ((Player*)m_caster)->GetCamera().SetView(summon);
+
+    m_caster->SetCharm(summon);
+    ((Player*)m_caster)->SetClientControl(summon, 1);
+    ((Player*)m_caster)->SetMover(summon);
+
+    summon->CombatStop(true);
+    summon->DeleteThreatList();
+
+    if(CharmInfo *charmInfo = summon->InitCharmInfo(summon))
+    {
+        charmInfo->InitPossessCreateSpells();
+        charmInfo->SetReactState(REACT_PASSIVE);
+        charmInfo->SetCommandState(COMMAND_STAY);
+    }
+
+    ((Player*)m_caster)->PossessSpellInitialize();
 }
 
 void Spell::EffectLearnSpell(SpellEffectIndex eff_idx)
@@ -4500,6 +4648,7 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
         {
             summon->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
             summon->SetCreatorGUID(m_caster->GetGUID());
+			summon->SetOwnerGUID(m_caster->GetGUID());
 
             if(forceFaction)
                 summon->setFaction(forceFaction);
@@ -4589,8 +4738,13 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
         if (duration > 0)
             spawnCreature->SetDuration(duration);
 
+		// Risen Ghoul and Army of the Dead Ghoul
+        if (spawnCreature->GetEntry() == 26125 || spawnCreature->GetEntry() == 24207)
+            spawnCreature->setPowerType(POWER_ENERGY);
+        else
+            spawnCreature->setPowerType(POWER_MANA);
+
         spawnCreature->SetOwnerGUID(m_caster->GetGUID());
-        spawnCreature->setPowerType(POWER_MANA);
         spawnCreature->SetUInt32Value(UNIT_NPC_FLAGS, spawnCreature->GetCreatureInfo()->npcflag);
         spawnCreature->setFaction(forceFaction ? forceFaction : m_caster->getFaction());
         spawnCreature->SetUInt32Value(UNIT_FIELD_FLAGS, 0);
@@ -5894,6 +6048,9 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 44870, true);
                     break;
                 }
+				case 45204: // Clone 
+					unitTarget->CastSpell(m_caster, damage, true);
+					break;
                 case 45206:                                 // Copy Off-hand Weapon
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT || !unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
@@ -6156,6 +6313,36 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
+                case 51904:                                 // Summon Ghouls Of Scarlet Crusade
+                {
+                    if(!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 54522, true);
+                    break;
+                }
+                case 52694:                                 // Recall Eye of Acherus
+                {
+                    if(!m_caster || m_caster->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    Unit *target = m_caster->GetCharmer();
+
+                    if(!target || target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    m_caster->SetCharmerGUID(0);
+                    target->RemoveAurasDueToSpell(51852);
+                    target->SetCharm(NULL);
+
+                    ((Player*)target)->GetCamera().ResetView();
+                    ((Player*)target)->SetClientControl(m_caster,0);
+                    ((Player*)target)->SetMover(NULL);
+
+                    m_caster->CleanupsBeforeDelete();
+                    m_caster->AddObjectToRemoveList();
+                        return;
+                }
                 case 52751:                                 // Death Gate
                 {
                     if (!unitTarget || unitTarget->getClass() != CLASS_DEATH_KNIGHT)
@@ -6339,6 +6526,10 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 66747, true);
                     return;
                 }
+                case 68861:                                 // Consume Soul (ICC FoS: Bronjahm)
+                    if (unitTarget)
+                        unitTarget->CastSpell(unitTarget, 68858, true);
+                    return;
                 case 69377:                                 // Fortitude
                 {
                     if (!unitTarget)
@@ -6757,6 +6948,29 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     break;
                 }
+				case 46584:		 // Raise dead
+                {
+                    // We will get here ONLY when we have a corpse of humanoid that gives honor or XP.
+                    // If we have active pet, then we should not cast the spell again.
+                    if(m_caster->GetPet())
+                    {
+                        if (m_caster->GetTypeId()==TYPEID_PLAYER)
+                            ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id,true);
+                        SendCastResult(SPELL_FAILED_ALREADY_HAVE_SUMMON);
+                        return;
+                    }
+                    // Do we have talent Master of Ghouls?
+                    if(m_caster->HasSpell(52143))
+                        // Summon ghoul as a pet
+                        m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),52150,true);
+                    else
+                        // Summon ghoul as a guardian
+                     m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),46585,true);
+					((Creature*)unitTarget)->setDeathState(ALIVE);
+                    // Used to prevent further EffectDummy execution
+                    finish();
+                    return;//break;	
+                }
             }
             break;
         }
@@ -6767,7 +6981,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
         return;
 
     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Spell ScriptStart spellid %u in EffectScriptEffect ", m_spellInfo->Id);
-    if (m_caster->IsInWorld())
+    if (m_caster->GetMapSafe() && m_caster->IsInWorld())
         m_caster->GetMap()->ScriptsStart(sSpellScripts, m_spellInfo->Id, m_caster, unitTarget);
 }
 

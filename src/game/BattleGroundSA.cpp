@@ -27,6 +27,7 @@
 #include "BattleGroundMgr.h"
 #include "Util.h"
 #include "MapManager.h"
+#include "ObjectMgr.h"
 
 BattleGroundSA::BattleGroundSA()
 {

@@ -242,8 +242,8 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     /*----------------*/
 
     // ignore wrong guid (player attempt cheating own session for not own guid possible...)
-    if (guid != mover->GetObjectGuid())
-        return;
+    //if (guid != mover->GetObjectGuid())
+    //    return;
 
     if (!MaNGOS::IsValidMapCoord(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o))
     {

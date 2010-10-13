@@ -158,7 +158,10 @@ class MANGOS_DLL_SPEC Object
 
         const uint64& GetUInt64Value( uint16 index ) const
         {
-            MANGOS_ASSERT( index + 1 < m_valuesCount || PrintIndexError( index , false) );
+            //MANGOS_ASSERT( index + 1 < m_valuesCount || PrintIndexError( index , false) );
+            if (!m_uint32Values)
+                return GetUInt64Value(0);
+
             return *((uint64*)&(m_uint32Values[ index ]));
         }
 
@@ -226,6 +229,9 @@ class MANGOS_DLL_SPEC Object
 
         void SetByteFlag( uint16 index, uint8 offset, uint8 newFlag );
         void RemoveByteFlag( uint16 index, uint8 offset, uint8 newFlag );
+
+        void SetShortFlag(uint16 index, bool highpart, uint16 newFlag);
+        void RemoveShortFlag(uint16 index, bool highpart, uint16 oldFlag);
 
         void ToggleFlag( uint16 index, uint8 offset, uint8 flag )
         {

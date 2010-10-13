@@ -221,7 +221,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 {
     uint32 opcode = recv_data.GetOpcode();
     DEBUG_LOG("WORLD: Recvd %s (%u, 0x%X) opcode", LookupOpcodeName(opcode), opcode, opcode);
-    recv_data.hexlike();
+    //recv_data.hexlike();
 
     Unit *mover = _player->GetMover();
     Player *plMover = mover->GetTypeId() == TYPEID_PLAYER ? (Player*)mover : NULL;
@@ -450,7 +450,7 @@ void WorldSession::HandleSetActiveMoverOpcode(WorldPacket &recv_data)
 void WorldSession::HandleMoveNotActiveMoverOpcode(WorldPacket &recv_data)
 {
     DEBUG_LOG("WORLD: Recvd CMSG_MOVE_NOT_ACTIVE_MOVER");
-    recv_data.hexlike();
+    //recv_data.hexlike();
 
     ObjectGuid old_mover_guid;
     MovementInfo mi;

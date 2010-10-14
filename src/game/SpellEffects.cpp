@@ -543,7 +543,9 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     if (aura)
                     {
                         int32 damagetick = aura->GetModifier()->m_amount;
-                        damage += damagetick * 4;
+                        // Save value of further damage
+                        m_currentBasePoints[1] = damagetick * 2 / 3;
+                        damage += damagetick * 3;
 
                         // Glyph of Conflagrate
                         if (!m_caster->HasAura(56235))
@@ -708,13 +710,22 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                 // Arcane Shot
                 else if ((m_spellInfo->SpellFamilyFlags & UI64LIT(0x00000800)) && m_spellInfo->maxLevel > 0)
                 {
-                    damage += int32(m_caster->GetTotalAttackPowerValue(RANGED_ATTACK)*0.15f);
+                    float ap = m_caster->GetTotalAttackPowerValue(RANGED_ATTACK);
+                    ap += unitTarget->GetTotalAuraModifier(SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS);
+                    ap += m_caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_RANGED_ATTACK_POWER_VERSUS, unitTarget->GetCreatureTypeMask());
+                    damage += int32(ap*0.15f);
                 }
                 // Steady Shot
                 else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x100000000))
                 {
                     int32 base = irand((int32)m_caster->GetWeaponDamageRange(RANGED_ATTACK, MINDAMAGE),(int32)m_caster->GetWeaponDamageRange(RANGED_ATTACK, MAXDAMAGE));
-                    damage += int32(float(base)/m_caster->GetAttackTime(RANGED_ATTACK)*2800 + m_caster->GetTotalAttackPowerValue(RANGED_ATTACK)*0.1f);
+                    float ap = m_caster->GetTotalAttackPowerValue(RANGED_ATTACK);
+                    ap += unitTarget->GetTotalAuraModifier(SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS);
+                    ap += m_caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_RANGED_ATTACK_POWER_VERSUS, unitTarget->GetCreatureTypeMask());
+                    if(m_caster->GetTypeId()==TYPEID_PLAYER)
+                        damage += int32(float(base)/m_caster->GetAttackTime(RANGED_ATTACK)*2800 + ap*0.1f + ((Player*)m_caster)->GetAmmoDPS()*2.8f);
+                    else 
+                        damage += int32(float(base)/m_caster->GetAttackTime(RANGED_ATTACK)*2800 + ap*0.1f);
                 }
                 // Explosive Trap Effect
                 else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x00000004))
@@ -3010,7 +3021,14 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
     }
 
-    m_caster->NearTeleportTo(x, y, z, o, true);
+    uint32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
+    if (!speed_z)
+        speed_z = 10;
+    uint32 time = m_spellInfo->EffectMiscValueB[eff_idx];
+    if (!time)
+        time = speed_z * 10;
+
+    m_caster->MonsterJump(x, y, z, o, time, speed_z);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
@@ -5778,6 +5796,38 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 6962:
+                {
+                    if(m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    Player* plr = ((Player*)m_caster);
+                    if(plr && plr->GetLastPetNumber())
+                    {
+                        PetType NewPetType = (plr->getClass()==CLASS_HUNTER) ? HUNTER_PET : SUMMON_PET;
+                        if (Pet* NewPet = new Pet(NewPetType))
+                        {
+                            if(NewPet->LoadPetFromDB(plr, 0, plr->GetLastPetNumber(), true))
+                            {
+                                NewPet->SetHealth(NewPet->GetMaxHealth());
+                                NewPet->SetPower(NewPet->getPowerType(),NewPet->GetMaxPower(NewPet->getPowerType()));
+
+                                switch (NewPet->GetEntry())
+                                {
+                                    case 11859:
+                                    case    89:
+                                        NewPet->SetEntry(416);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            else
+                                delete NewPet;
+                        }
+                    }
+                    return;
+                }
                 case 8856:                                  // Bending Shinbone
                 {
                     if (!itemTarget && m_caster->GetTypeId()!=TYPEID_PLAYER)
@@ -8149,6 +8199,8 @@ void Spell::EffectSpiritHeal(SpellEffectIndex /*eff_idx*/)
 
     ((Player*)unitTarget)->ResurrectPlayer(1.0f);
     ((Player*)unitTarget)->SpawnCorpseBones();
+
+    ((Player*)unitTarget)->CastSpell(unitTarget, 6962, true);
 }
 
 // remove insignia spell effect

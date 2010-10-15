@@ -240,6 +240,9 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     recv_data >> guid.ReadAsPacked();
     recv_data >> movementInfo;
     /*----------------*/
+	
+	if (!mover->IsInWorld())
+		return;
 
     // ignore wrong guid (player attempt cheating own session for not own guid possible...)
     if (guid != mover->GetObjectGuid())

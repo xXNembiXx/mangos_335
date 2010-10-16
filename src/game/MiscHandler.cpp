@@ -1328,20 +1328,8 @@ void WorldSession::HandleSetTitleOpcode( WorldPacket & recv_data )
 
 void WorldSession::HandleTimeSyncResp( WorldPacket & recv_data )
 {
-    DEBUG_LOG("CMSG_TIME_SYNC_RESP");
-
     uint32 counter, clientTicks;
     recv_data >> counter >> clientTicks;
-
-    if(counter != _player->m_timeSyncCounter - 1)
-        DEBUG_LOG("Wrong time sync counter from player %s (cheater?)", _player->GetName());
-
-    DEBUG_LOG("Time sync received: counter %u, client ticks %u, time since last sync %u", counter, clientTicks, clientTicks - _player->m_timeSyncClient);
-
-    uint32 ourTicks = clientTicks + (getMSTime() - _player->m_timeSyncServer);
-
-    // diff should be small
-    DEBUG_LOG("Our ticks: %u, diff %u, latency %u", ourTicks, ourTicks - clientTicks, GetLatency());
 
     _player->m_timeSyncClient = clientTicks;
 }
@@ -1536,7 +1524,6 @@ void WorldSession::HandleQueryInspectAchievementsOpcode( WorldPacket & recv_data
 void WorldSession::HandleWorldStateUITimerUpdateOpcode(WorldPacket& /*recv_data*/)
 {
     // empty opcode
-    DEBUG_LOG("WORLD: CMSG_WORLD_STATE_UI_TIMER_UPDATE");
 
     WorldPacket data(SMSG_WORLD_STATE_UI_TIMER_UPDATE, 4);
     data << uint32(time(NULL));

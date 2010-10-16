@@ -446,7 +446,7 @@ void WorldSession::HandleNpcTextQueryOpcode( WorldPacket & recv_data )
 void WorldSession::HandlePageTextQueryOpcode( WorldPacket & recv_data )
 {
     DETAIL_LOG("WORLD: Received CMSG_PAGE_TEXT_QUERY");
-    recv_data.hexlike();
+    //recv_data.hexlike();
 
     uint32 pageID;
     recv_data >> pageID;

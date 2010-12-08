@@ -492,7 +492,7 @@ void ObjectMgr::LoadPointOfInterestLocales()
 struct SQLCreatureLoader : public SQLStorageLoaderBase<SQLCreatureLoader>
 {
     template<class D>
-    void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
+    void convert_from_str(uint32 /*field_pos*/, char const *src, D &dst)
     {
         dst = D(sObjectMgr.GetScriptId(src));
     }
@@ -1437,110 +1437,6 @@ void ObjectMgr::RemoveCreatureFromGrid(uint32 guid, CreatureData const* data)
     }
 }
 
-uint32 ObjectMgr::AddGOData(uint32 entry, uint32 mapId, float x, float y, float z, float o, uint32 spawntimedelay, float rotation0, float rotation1, float rotation2, float rotation3)
-{
-    GameObjectInfo const* goinfo = GetGameObjectInfo(entry);
-    if (!goinfo)
-        return 0;
-
-    Map * map = const_cast<Map*>(sMapMgr.FindMap(mapId));
-    if(!map)
-        return 0;
-
-    uint32 guid = GenerateLowGuid(HIGHGUID_GAMEOBJECT);
-    GameObjectData& data = NewGOData(guid);
-    data.id             = entry;
-    data.mapid          = mapId;
-    data.posX           = x;
-    data.posY           = y;
-    data.posZ           = z;
-    data.orientation    = o;
-    data.rotation0      = rotation0;
-    data.rotation1      = rotation1;
-    data.rotation2      = rotation2;
-    data.rotation3      = rotation3;
-    data.spawntimesecs  = spawntimedelay;
-    data.animprogress   = 100;
-    data.spawnMask      = 1;
-    data.go_state       = GO_STATE_READY;
-    data.phaseMask      = PHASEMASK_NORMAL;
-    data.artKit         = goinfo->type == GAMEOBJECT_TYPE_CAPTURE_POINT ? 21 : 0;
-    data.dbData = false;
-
-    AddGameobjectToGrid(guid, &data);
-
-    // Spawn if necessary (loaded grids only)
-    // We use spawn coords to spawn
-    if(!map->Instanceable() && map->IsLoaded(x, y))
-    {
-        GameObject *go = new GameObject;
-        if (!go->LoadFromDB(guid, map))
-        {
-            sLog.outError("AddGOData: cannot add gameobject entry %u to map", entry);
-            delete go;
-            return 0;
-        }
-        map->Add(go);
-    }
-
-    sLog.outDebug("AddGOData: dbguid %u entry %u map %u x %f y %f z %f o %f", guid, entry, mapId, x, y, z, o);
-
-    return guid;
-}
-
-uint32 ObjectMgr::AddCreData(uint32 entry, uint32 team, uint32 mapId, float x, float y, float z, float o, uint32 spawntimedelay)
-{
-    CreatureInfo const *cInfo = GetCreatureTemplate(entry);
-    if(!cInfo)
-        return 0;
-
-    uint32 level = cInfo->minlevel == cInfo->maxlevel ? cInfo->minlevel : urand(cInfo->minlevel, cInfo->maxlevel); // Only used for extracting creature base stats
-    //CreatureBaseStats const* stats = objmgr.GetCreatureBaseStats(level, cInfo->unit_class);
-
-    uint32 guid = GenerateLowGuid(HIGHGUID_UNIT);
-    CreatureData& data = NewOrExistCreatureData(guid);
-    data.id = entry;
-    data.mapid = mapId;
-    data.modelid_override = 0;
-    data.equipmentId = cInfo->equipmentId;
-    data.posX = x;
-    data.posY = y;
-    data.posZ = z;
-    data.orientation = o;
-    data.spawntimesecs = spawntimedelay;
-    data.spawndist = 0;
-    data.currentwaypoint = 0;
-    data.curhealth = 1;
-    data.curmana = 1;
-    data.is_dead = false;
-    data.movementType = cInfo->MovementType;
-    data.spawnMask = 1;
-    data.phaseMask = PHASEMASK_NORMAL;
-    data.dbData = false;
-
-    AddCreatureToGrid(guid, &data);
-
-    // Spawn if necessary (loaded grids only)
-    //if(Map* map = const_cast<Map*>(MapManager::Instance().CreateBaseMap(mapId)))
-    if(Map * map = const_cast<Map*>(sMapMgr.FindMap(mapId)))
-    {
-        // We use spawn coords to spawn
-        if(!map->Instanceable() && !map->IsRemovalGrid(x, y))
-        {
-            Creature* creature = new Creature;
-            if(!creature->LoadFromDB(guid, map))
-            {
-                sLog.outError("AddCreature: cannot add creature entry %u to map", entry);
-                delete creature;
-                return 0;
-            }
-            map->Add(creature);
-        }
-    }
-
-    return guid;
-}
-
 void ObjectMgr::LoadGameobjects()
 {
     uint32 count = 0;
@@ -1845,7 +1741,7 @@ bool ObjectMgr::GetPlayerNameByGUID(ObjectGuid guid, std::string &name) const
     return false;
 }
 
-uint32 ObjectMgr::GetPlayerTeamByGUID(ObjectGuid guid) const
+Team ObjectMgr::GetPlayerTeamByGUID(ObjectGuid guid) const
 {
     // prevent DB access for online player
     if (Player* player = GetPlayer(guid))
@@ -1862,7 +1758,7 @@ uint32 ObjectMgr::GetPlayerTeamByGUID(ObjectGuid guid) const
         return Player::TeamForRace(race);
     }
 
-    return 0;
+    return TEAM_NONE;
 }
 
 uint32 ObjectMgr::GetPlayerAccountIdByGUID(ObjectGuid guid) const
@@ -1970,7 +1866,7 @@ void ObjectMgr::LoadItemLocales()
 struct SQLItemLoader : public SQLStorageLoaderBase<SQLItemLoader>
 {
     template<class D>
-    void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
+    void convert_from_str(uint32 /*field_pos*/, char const *src, D &dst)
     {
         dst = D(sObjectMgr.GetScriptId(src));
     }
@@ -5571,7 +5467,7 @@ void ObjectMgr::LoadPageTextLocales()
 struct SQLInstanceLoader : public SQLStorageLoaderBase<SQLInstanceLoader>
 {
     template<class D>
-    void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
+    void convert_from_str(uint32 /*field_pos*/, char const *src, D &dst)
     {
         dst = D(sObjectMgr.GetScriptId(src));
     }
@@ -6115,7 +6011,7 @@ void ObjectMgr::LoadEventIdScripts()
     sLog.outString( ">> Loaded %u scripted event id", count );
 }
 
-uint32 ObjectMgr::GetNearestTaxiNode( float x, float y, float z, uint32 mapid, uint32 team )
+uint32 ObjectMgr::GetNearestTaxiNode( float x, float y, float z, uint32 mapid, Team team )
 {
     bool found = false;
     float dist;
@@ -6178,7 +6074,7 @@ void ObjectMgr::GetTaxiPath( uint32 source, uint32 destination, uint32 &path, ui
     path = dest_i->second.ID;
 }
 
-uint32 ObjectMgr::GetTaxiMountDisplayId( uint32 id, uint32 team, bool allowed_alt_team /* = false */)
+uint32 ObjectMgr::GetTaxiMountDisplayId( uint32 id, Team team, bool allowed_alt_team /* = false */)
 {
     uint16 mount_entry = 0;
 
@@ -6248,33 +6144,33 @@ void ObjectMgr::LoadGraveyardZones()
         uint32 team   = fields[2].GetUInt32();
 
         WorldSafeLocsEntry const* entry = sWorldSafeLocsStore.LookupEntry(safeLocId);
-        if(!entry)
+        if (!entry)
         {
             sLog.outErrorDb("Table `game_graveyard_zone` has record for not existing graveyard (WorldSafeLocs.dbc id) %u, skipped.",safeLocId);
             continue;
         }
 
         AreaTableEntry const *areaEntry = GetAreaEntryByAreaID(zoneId);
-        if(!areaEntry)
+        if (!areaEntry)
         {
-            sLog.outErrorDb("Table `game_graveyard_zone` has record for not existing zone id (%u), skipped.",zoneId);
+            sLog.outErrorDb("Table `game_graveyard_zone` has record for not existing zone id (%u), skipped.", zoneId);
             continue;
         }
 
-        if(areaEntry->zone != 0)
+        if (areaEntry->zone != 0)
         {
-            sLog.outErrorDb("Table `game_graveyard_zone` has record subzone id (%u) instead of zone, skipped.",zoneId);
+            sLog.outErrorDb("Table `game_graveyard_zone` has record subzone id (%u) instead of zone, skipped.", zoneId);
             continue;
         }
 
-        if(team!=0 && team!=HORDE && team!=ALLIANCE)
+        if (team != TEAM_NONE && team != HORDE && team != ALLIANCE)
         {
-            sLog.outErrorDb("Table `game_graveyard_zone` has record for non player faction (%u), skipped.",team);
+            sLog.outErrorDb("Table `game_graveyard_zone` has record for non player faction (%u), skipped.", team);
             continue;
         }
 
-        if(!AddGraveYardLink(safeLocId,zoneId,team,false))
-            sLog.outErrorDb("Table `game_graveyard_zone` has a duplicate record for Graveyard (ID: %u) and Zone (ID: %u), skipped.",safeLocId,zoneId);
+        if(!AddGraveYardLink(safeLocId, zoneId, Team(team), false))
+            sLog.outErrorDb("Table `game_graveyard_zone` has a duplicate record for Graveyard (ID: %u) and Zone (ID: %u), skipped.", safeLocId, zoneId);
     } while( result->NextRow() );
 
     delete result;
@@ -6283,7 +6179,7 @@ void ObjectMgr::LoadGraveyardZones()
     sLog.outString( ">> Loaded %u graveyard-zone links", count );
 }
 
-WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float z, uint32 MapId, uint32 team)
+WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float z, uint32 MapId, Team team)
 {
     // search for zone associated closest graveyard
     uint32 zoneId = sTerrainMgr.GetZoneId(MapId,x,y,z);
@@ -6299,7 +6195,7 @@ WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float
 
     if (bounds.first == bounds.second)
     {
-        sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.",zoneId,team);
+        sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.", zoneId, uint32(team));
         return NULL;
     }
 
@@ -6331,7 +6227,7 @@ WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float
 
         // skip enemy faction graveyard
         // team == 0 case can be at call from .neargrave
-        if(data.team != 0 && team != 0 && data.team != team)
+        if (data.team != TEAM_NONE && team != TEAM_NONE && data.team != team)
             continue;
 
         // find now nearest graveyard at other (continent) map
@@ -6409,7 +6305,7 @@ GraveYardData const* ObjectMgr::FindGraveYardData(uint32 id, uint32 zoneId) cons
     return NULL;
 }
 
-bool ObjectMgr::AddGraveYardLink(uint32 id, uint32 zoneId, uint32 team, bool inDB)
+bool ObjectMgr::AddGraveYardLink(uint32 id, uint32 zoneId, Team team, bool inDB)
 {
     if(FindGraveYardData(id,zoneId))
         return false;
@@ -6425,57 +6321,10 @@ bool ObjectMgr::AddGraveYardLink(uint32 id, uint32 zoneId, uint32 team, bool inD
     if(inDB)
     {
         WorldDatabase.PExecuteLog("INSERT INTO game_graveyard_zone ( id,ghost_zone,faction) "
-            "VALUES ('%u', '%u','%u')",id,zoneId,team);
+            "VALUES ('%u', '%u','%u')", id, zoneId, uint32(team));
     }
 
     return true;
-}
-
-void ObjectMgr::RemoveGraveYardLink(uint32 id, uint32 zoneId, uint32 team, bool inDB)
-{
-    GraveYardMap::iterator graveLow  = mGraveYardMap.lower_bound(zoneId);
-    GraveYardMap::iterator graveUp   = mGraveYardMap.upper_bound(zoneId);
-    if(graveLow==graveUp)
-    {
-        //sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.",zoneId,team);
-        return;
-    }
-
-    bool found = false;
-
-    GraveYardMap::iterator itr;
-
-    for (itr = graveLow; itr != graveUp; ++itr)
-    {
-        GraveYardData & data = itr->second;
-
-        // skip not matching safezone id
-        if(data.safeLocId != id)
-            continue;
-
-        // skip enemy faction graveyard at same map (normal area, city, or battleground)
-        // team == 0 case can be at call from .neargrave
-        if(data.team != 0 && team != 0 && data.team != team)
-            continue;
-
-        found = true;
-        break;
-    }
-
-    // no match, return
-    if(!found)
-        return;
-
-    // remove from links
-    mGraveYardMap.erase(itr);
-
-    // remove link from DB
-    if(inDB)
-    {
-        WorldDatabase.PExecute("DELETE FROM game_graveyard_zone WHERE id = '%u' AND ghost_zone = '%u' AND faction = '%u'",id,zoneId,team);
-    }
-
-    return;
 }
 
 void ObjectMgr::LoadAreaTriggerTeleports()
@@ -6908,7 +6757,7 @@ void ObjectMgr::LoadGameObjectLocales()
 struct SQLGameObjectLoader : public SQLStorageLoaderBase<SQLGameObjectLoader>
 {
     template<class D>
-    void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
+    void convert_from_str(uint32 /*field_pos*/, char const *src, D &dst)
     {
         dst = D(sObjectMgr.GetScriptId(src));
     }
@@ -8682,7 +8531,7 @@ bool PlayerCondition::Meets(Player const * player) const
             return faction && player->GetReputationMgr().GetRank(faction) >= ReputationRank(value2);
         }
         case CONDITION_TEAM:
-            return player->GetTeam() == value1;
+            return uint32(player->GetTeam()) == value1;
         case CONDITION_SKILL:
             return player->HasSkill(value1) && player->GetBaseSkillValue(value1) >= value2;
         case CONDITION_QUESTREWARDED:

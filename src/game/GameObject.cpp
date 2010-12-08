@@ -34,11 +34,10 @@
 #include "InstanceData.h"
 #include "BattleGround.h"
 #include "BattleGroundAV.h"
-#include "OutdoorPvPMgr.h"
 #include "Util.h"
 #include "ScriptCalls.h"
 
-GameObject::GameObject() : WorldObject(), m_goValue(new GameObjectValue)
+GameObject::GameObject() : WorldObject()
 {
     m_objectType |= TYPEMASK_GAMEOBJECT;
     m_objectTypeId = TYPEID_GAMEOBJECT;
@@ -54,27 +53,22 @@ GameObject::GameObject() : WorldObject(), m_goValue(new GameObjectValue)
     m_spellId = 0;
     m_cooldownTime = 0;
     m_goInfo = NULL;
-    m_goData = NULL;
 
     m_DBTableGuid = 0;
     m_rotation = 0;
+
+    m_health = 0;
 }
 
 GameObject::~GameObject()
 {
-    delete m_goValue;
 }
 
 void GameObject::AddToWorld()
 {
     ///- Register the gameobject for guid lookup
     if(!IsInWorld())
-    {
-        if(m_zoneScript)
-            m_zoneScript->OnGameObjectCreate(this, true);
-
         GetMap()->GetObjectsStore().insert<GameObject>(GetGUID(), (GameObject*)this);
-    }
 
     Object::AddToWorld();
 }
@@ -84,9 +78,6 @@ void GameObject::RemoveFromWorld()
     ///- Remove the gameobject from the accessor
     if(IsInWorld())
     {
-        if(m_zoneScript)
-            m_zoneScript->OnGameObjectCreate(this, false);
-
         // Remove GO from owner
         ObjectGuid owner_guid = GetOwnerGuid();
         if (!owner_guid.IsEmpty())
@@ -106,7 +97,7 @@ void GameObject::RemoveFromWorld()
     Object::RemoveFromWorld();
 }
 
-bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMask, float x, float y, float z, float ang, float rotation0, float rotation1, float rotation2, float rotation3, uint8 animprogress, GOState go_state, uint32 artKit)
+bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMask, float x, float y, float z, float ang, float rotation0, float rotation1, float rotation2, float rotation3, uint8 animprogress, GOState go_state)
 {
     MANGOS_ASSERT(map);
     Relocate(x,y,z,ang);
@@ -156,13 +147,15 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
     // GAMEOBJECT_BYTES_1, index at 0, 1, 2 and 3
     SetGoState(go_state);
     SetGoType(GameobjectTypes(goinfo->type));
-    SetGoArtKit(artKit);
+    SetGoArtKit(0);                                         // unknown what this is
     SetGoAnimProgress(animprogress);
 
-    SetByteValue(GAMEOBJECT_BYTES_1, 2, artKit);
-
     if (goinfo->type == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
-        m_goValue->destructibleBuilding.health = goinfo->destructibleBuilding.intactNumHits + goinfo->destructibleBuilding.damagedNumHits;
+    {
+        m_health = GetMaxHealth();
+        // destructible GO's show their "HP" as their animprogress
+        SetGoAnimProgress(255);
+    }
 
     //Notify the map's instance data.
     //Only works if you create the object in it, not if it is moves to that map.
@@ -178,7 +171,6 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
         if (goinfo->transport.startOpen)
             SetGoState(GO_STATE_ACTIVE);
     }
-    SetZoneScript();
 
     return true;
 }
@@ -224,7 +216,7 @@ void GameObject::Update(uint32 update_diff)
                             udata.BuildPacket(&packet);
                             ((Player*)caster)->GetSession()->SendPacket(&packet);
 
-                            SendGameObjectCustomAnim(GetGUID());
+                            SendGameObjectCustomAnim(GetGUID(), 0);
                         }
 
                         m_lootState = GO_READY;             // can be successfully open with some chance
@@ -652,8 +644,6 @@ bool GameObject::LoadFromDB(uint32 guid, Map *map)
         }
     }
 
-    m_goData = data;
-
     return true;
 }
 
@@ -664,6 +654,11 @@ void GameObject::DeleteFromDB()
     WorldDatabase.PExecuteLog("DELETE FROM gameobject WHERE guid = '%u'", m_DBTableGuid);
     WorldDatabase.PExecuteLog("DELETE FROM game_event_gameobject WHERE guid = '%u'", m_DBTableGuid);
     WorldDatabase.PExecuteLog("DELETE FROM gameobject_battleground WHERE guid = '%u'", m_DBTableGuid);
+}
+
+GameObjectInfo const *GameObject::GetGOInfo() const
+{
+    return m_goInfo;
 }
 
 /*********************************************************/
@@ -715,7 +710,7 @@ Unit* GameObject::GetOwner() const
 
 void GameObject::SaveRespawnTime()
 {
-    if(m_goData && m_goData->dbData && m_respawnTime > time(NULL) && m_spawnedByDefault)
+    if(m_respawnTime > time(NULL) && m_spawnedByDefault)
         sObjectMgr.SaveGORespawnTime(m_DBTableGuid,GetInstanceId(),m_respawnTime);
 }
 
@@ -939,29 +934,6 @@ void GameObject::UseDoorOrButton(uint32 time_to_restore, bool alternative /* = f
     m_cooldownTime = time(NULL) + time_to_restore;
 }
 
-void GameObject::SetGoArtKit(uint8 kit)
-{
-    SetByteValue(GAMEOBJECT_BYTES_1, 2, kit);
-    GameObjectData *data = const_cast<GameObjectData*>(sObjectMgr.GetGOData(m_DBTableGuid));
-    if(data)
-        data->artKit = kit;
-}
-
-void GameObject::SetGoArtKit(uint8 artkit, GameObject *go, uint32 lowguid)
-{
-    const GameObjectData *data = NULL;
-    if(go)
-    {
-        go->SetGoArtKit(artkit);
-        data = go->GetGOData();
-    }
-    else if(lowguid)
-        data = sObjectMgr.GetGOData(lowguid);
-
-    if(data)
-        const_cast<GameObjectData*>(data)->artKit = artkit;
-}
-
 void GameObject::SwitchDoorOrButton(bool activate, bool alternative /* = false */)
 {
     if(activate)
@@ -1173,7 +1145,7 @@ void GameObject::Use(Unit* user)
 
             // this appear to be ok, however others exist in addition to this that should have custom (ex: 190510, 188692, 187389)
             if (time_to_restore && info->goober.customAnim)
-                SendGameObjectCustomAnim(GetGUID());
+                SendGameObjectCustomAnim(GetGUID(), info->goober.customAnim);
             else
                 SetGoState(GO_STATE_ACTIVE);
 
@@ -1547,10 +1519,7 @@ void GameObject::Use(Unit* user)
     SpellEntry const *spellInfo = sSpellStore.LookupEntry(spellId);
     if (!spellInfo)
     {
-        if(user->GetTypeId() != TYPEID_PLAYER || !sOutdoorPvPMgr.HandleCustomSpell((Player*)user,spellId,this))
-            sLog.outError("WORLD: unknown spell id %u at use action for gameobject (Entry: %u GoType: %u )", spellId,GetEntry(),GetGoType());
-        else
-            sLog.outDebug("WORLD: %u non-dbc spell was handled by OutdoorPvP", spellId);
+        sLog.outError("WORLD: unknown spell id %u at use action for gameobject (Entry: %u GoType: %u )", spellId,GetEntry(),GetGoType());
         return;
     }
 
@@ -1561,6 +1530,87 @@ void GameObject::Use(Unit* user)
     targets.setUnitTarget(user);
 
     spell->prepare(&targets);
+}
+
+bool GameObject::IsInRange(float x, float y, float z, float radius) const
+{
+    GameObjectDisplayInfoEntry const *info = sGameObjectDisplayInfoStore.LookupEntry(GetUInt32Value(GAMEOBJECT_DISPLAYID));
+    if (!info)
+        return IsWithinDist3d(x, y, z, radius);
+
+    float dx = x - GetPositionX();
+    float dy = y - GetPositionY();
+    float dz = z - GetPositionZ();
+    float dist = sqrt(dx*dx + dy*dy);
+
+    if (dist <= CONTACT_DISTANCE)   // prevent division by 0
+        return true;
+
+    float sinA = sin(GetOrientation());
+    float cosA = cos(GetOrientation());
+    float sinB = dx / dist;
+    float cosB = dy / dist;
+
+    dx = dist * (cosA * cosB + sinA * sinB);
+    dy = dist * (cosA * sinB - sinA * cosB);
+
+    return dx < info->maxX + radius && dx > info->minX - radius
+        && dy < info->maxY + radius && dy > info->minY - radius
+        && dz < info->maxZ + radius && dz > info->minZ - radius;
+}
+
+void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
+{
+    if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !m_health)
+        return;
+
+    DEBUG_FILTER_LOG(LOG_FILTER_DAMAGE, "GO damage taken: %u to health %u", damage, m_health);
+
+    if (m_health > damage)
+        m_health -= damage;
+    else
+        m_health = 0;
+
+    if (HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED)) // from damaged to destroyed
+    {
+        if (!m_health)
+        {
+            RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
+            SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
+            SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->destructibleBuilding.destroyedDisplayId);
+        }
+    }
+    else                                            // from intact to damaged
+    {
+        if (m_health <= m_goInfo->destructibleBuilding.damagedNumHits)
+        {
+            SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
+            SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->destructibleBuilding.damagedDisplayId);
+            // if we have a "dead" display we can "kill" the building after its damaged
+            if (m_goInfo->destructibleBuilding.destroyedDisplayId)
+            {
+                m_health = m_goInfo->destructibleBuilding.damagedNumHits;
+                if (!m_health)
+                    m_health = 1;
+            }
+            // otherwise we just handle it as "destroyed"
+            else
+                m_health = 0;
+         }
+    }
+    SetGoAnimProgress(m_health * 255 / GetMaxHealth());
+}
+
+void GameObject::Rebuild(Unit* pWho)
+{
+    if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
+        return;
+
+    RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
+    SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->displayId);
+    m_health = GetMaxHealth();
+
+    SetGoAnimProgress(255);
 }
 
 // overwrite WorldObject function for proper name localization
@@ -1701,7 +1751,7 @@ float GameObject::GetObjectBoundingRadius() const
     // 1. This is clearly hack way because GameObjectDisplayInfoEntry have 6 floats related to GO sizes, but better that use DEFAULT_WORLD_OBJECT_SIZE
     // 2. In some cases this must be only interactive size, not GO size, current way can affect creature target point auto-selection in strange ways for big underground/virtual GOs
     if (GameObjectDisplayInfoEntry const* dispEntry = sGameObjectDisplayInfoStore.LookupEntry(GetGOInfo()->displayId))
-        return fabs(dispEntry->unknown12) * GetObjectScale();
+        return fabs(dispEntry->minX) * GetObjectScale();
 
     return DEFAULT_WORLD_OBJECT_SIZE;
 }

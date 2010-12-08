@@ -17,9 +17,10 @@
 ## Process this file with automake to produce Makefile.in
 
 ## Sub-directories to parse
+SUBDIRS = vmap
 
 ## CPP flags for includes, defines, etc.
-AM_CPPFLAGS = $(MANGOS_INCLUDES) -I$(top_builddir)/src/shared -I$(srcdir) -I$(srcdir)/../../dep/include -I$(srcdir)/../framework -I$(srcdir)/../shared -I$(srcdir)/../shared/vmap -I$(srcdir)/../realmd -DSYSCONFDIR=\"$(sysconfdir)/\"
+AM_CPPFLAGS = $(MANGOS_INCLUDES) -I$(top_builddir)/src/shared -I$(srcdir) -I$(srcdir)/../../dep/include -I$(srcdir)/../framework -I$(srcdir)/../shared -I$(srcdir)/vmap -I$(srcdir)/../realmd -I$(srcdir)/../../dep/include/g3dlite -DSYSCONFDIR=\"$(sysconfdir)/\"
 
 ## Build MaNGOS game library as convenience library.
 #  All libraries will be convenience libraries. Might be changed to shared
@@ -215,25 +216,6 @@ libmangosgame_a_SOURCES = \
 	ObjectPosSelector.h \
 	Opcodes.cpp \
 	Opcodes.h \
-	OutdoorPvP.cpp \
-	OutdoorPvP.h \
-	OutdoorPvPEP.cpp \
-	OutdoorPvPEP.h \
-	OutdoorPvPGH.cpp \
-	OutdoorPvPGH.h \
-	OutdoorPvPHP.cpp \
-	OutdoorPvPHP.h \
-	OutdoorPvPImpl.h \
-	OutdoorPvPMgr.cpp \
-	OutdoorPvPMgr.h \
-	OutdoorPvPNA.cpp \
-	OutdoorPvPNA.h \
-	OutdoorPvPSI.cpp \
-	OutdoorPvPSI.h \
-	OutdoorPvPTF.cpp \
-	OutdoorPvPTF.h \
-	OutdoorPvPZM.cpp \
-	OutdoorPvPZM.h \
 	Path.h \
 	PetAI.cpp \
 	PetAI.h \
@@ -325,8 +307,7 @@ libmangosgame_a_SOURCES = \
 	FollowerRefManager.h \
 	GroupReference.cpp \
 	GroupReference.h \
-	GroupRefManager.h \
-	ZoneScript.h
+	GroupRefManager.h
 
 ## Additional files to include when running 'make dist'
 #  Precompiled Headers for WIN

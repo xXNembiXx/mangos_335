@@ -360,26 +360,26 @@ struct GameObjectInfo
             uint32 creditProxyCreature;                     //1
             uint32 empty1;                                  //2
             uint32 intactEvent;                             //3
-            uint32 empty2;                                  //4
+            uint32 damagedDisplayId;                        //4
             uint32 damagedNumHits;                          //5
-            uint32 empty3;                                  //6
-            uint32 empty4;                                  //7
-            uint32 empty5;                                  //8
+            uint32 empty2;                                  //6
+            uint32 empty3;                                  //7
+            uint32 empty4;                                  //8
             uint32 damagedEvent;                            //9
-            uint32 empty6;                                  //10
-            uint32 empty7;                                  //11
-            uint32 empty8;                                  //12
-            uint32 empty9;                                  //13
+            uint32 destroyedDisplayId;                      //10
+            uint32 empty5;                                  //11
+            uint32 empty6;                                  //12
+            uint32 empty7;                                  //13
             uint32 destroyedEvent;                          //14
-            uint32 empty10;                                 //15
+            uint32 empty8;                                  //15
             uint32 debuildingTimeSecs;                      //16
-            uint32 empty11;                                 //17
+            uint32 empty9;                                  //17
             uint32 destructibleData;                        //18
             uint32 rebuildingEvent;                         //19
-            uint32 empty12;                                 //20
-            uint32 empty13;                                 //21
+            uint32 empty10;                                 //20
+            uint32 empty11;                                 //21
             uint32 damageEvent;                             //22
-            uint32 empty14;                                 //23
+            uint32 empty12;                                 //23
         } destructibleBuilding;
         //34 GAMEOBJECT_TYPE_GUILDBANK - empty
         //35 GAMEOBJECT_TYPE_TRAPDOOR
@@ -516,15 +516,6 @@ struct GameObjectInfo
     }
 };
 
-union GameObjectValue
-{
-    //33 GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING
-    struct
-    {
-        uint32 health;
-    }destructibleBuilding;
-};
-
 // GCC have alternative #pragma pack() syntax and old gcc version not support pack(pop), also any gcc version not support it at some platform
 #if defined( __GNUC__ )
 #pragma pack()
@@ -551,7 +542,6 @@ enum GOState
 // from `gameobject`
 struct GameObjectData
 {
-    explicit GameObjectData() : dbData(true) {}
     uint32 id;                                              // entry in gamobject_template
     uint16 mapid;
     uint16 phaseMask;
@@ -567,8 +557,6 @@ struct GameObjectData
     uint32 animprogress;
     GOState go_state;
     uint8 spawnMask;
-    uint8 artKit;
-    bool dbData;
 };
 
 // For containers:  [GO_NOT_READY]->GO_READY (close)->GO_ACTIVATED (open) ->GO_JUST_DEACTIVATED->GO_READY        -> ...
@@ -599,11 +587,9 @@ class MANGOS_DLL_SPEC GameObject : public WorldObject
         void AddToWorld();
         void RemoveFromWorld();
 
-        bool Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMask, float x, float y, float z, float ang, float rotation0, float rotation1, float rotation2, float rotation3, uint8 animprogress, GOState go_state, uint32 artKit = 0);
+        bool Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMask, float x, float y, float z, float ang, float rotation0, float rotation1, float rotation2, float rotation3, uint8 animprogress, GOState go_state);
         void Update(uint32 p_time);
-        GameObjectInfo const* GetGOInfo() const { return m_goInfo; }
-        GameObjectData const* GetGOData() const { return m_goData; }
-        GameObjectValue * GetGOValue() const { return m_goValue; }
+        GameObjectInfo const* GetGOInfo() const;
 
         bool IsTransport() const;
         bool IsDynTransport() const;
@@ -667,8 +653,7 @@ class MANGOS_DLL_SPEC GameObject : public WorldObject
         GOState GetGoState() const { return GOState(GetByteValue(GAMEOBJECT_BYTES_1, 0)); }
         void SetGoState(GOState state) { SetByteValue(GAMEOBJECT_BYTES_1, 0, state); }
         uint8 GetGoArtKit() const { return GetByteValue(GAMEOBJECT_BYTES_1, 2); }
-        void SetGoArtKit(uint8 artkit);
-        static void SetGoArtKit(uint8 artkit, GameObject *go, uint32 lowguid = 0);
+        void SetGoArtKit(uint8 artkit) { SetByteValue(GAMEOBJECT_BYTES_1, 2, artkit); }
         uint8 GetGoAnimProgress() const { return GetByteValue(GAMEOBJECT_BYTES_1, 3); }
         void SetGoAnimProgress(uint8 animprogress) { SetByteValue(GAMEOBJECT_BYTES_1, 3, animprogress); }
 
@@ -720,6 +705,14 @@ class MANGOS_DLL_SPEC GameObject : public WorldObject
         GridReference<GameObject> &GetGridRef() { return m_gridRef; }
 
         uint64 GetRotation() const { return m_rotation; }
+
+        bool IsInRange(float x, float y, float z, float radius) const;
+        void DamageTaken(Unit *pDoneBy, uint32 uiDamage);
+        void Rebuild(Unit *pWho);
+
+        uint32 GetHealth() const { return m_health; }
+        uint32 GetMaxHealth() const { return m_goInfo->destructibleBuilding.intactNumHits + m_goInfo->destructibleBuilding.damagedNumHits; }
+
     protected:
         uint32      m_spellId;
         time_t      m_respawnTime;                          // (secs) time of next respawn (or despawn if GO have owner()),
@@ -728,7 +721,7 @@ class MANGOS_DLL_SPEC GameObject : public WorldObject
         bool        m_spawnedByDefault;
         time_t      m_cooldownTime;                         // used as internal reaction delay time store (not state change reaction).
                                                             // For traps this: spell casting cooldown, for doors/buttons: reset time.
-
+        uint32      m_health;
         typedef std::set<ObjectGuid> GuidsSet;
 
         GuidsSet m_SkillupSet;                              // players that already have skill-up at GO use
@@ -741,8 +734,6 @@ class MANGOS_DLL_SPEC GameObject : public WorldObject
 
         uint32 m_DBTableGuid;                               ///< For new or temporary gameobjects is 0 for saved it is lowguid
         GameObjectInfo const* m_goInfo;
-        GameObjectData const* m_goData;
-        GameObjectValue * const m_goValue;
         uint64 m_rotation;
     private:
         void SwitchDoorOrButton(bool activate, bool alternative = false);

@@ -49,7 +49,6 @@
 #include "Policies/SingletonImp.h"
 #include "BattleGroundMgr.h"
 #include "Language.h"
-#include "OutdoorPvPMgr.h"
 #include "TemporarySummon.h"
 #include "VMapFactory.h"
 #include "GameEventMgr.h"
@@ -780,9 +779,9 @@ void World::LoadConfigSettings(bool reload)
 
     setConfig(CONFIG_BOOL_ALLOW_FLIGHT_ON_OLD_MAPS, "AllowFlightOnOldMaps", false);
 
-    // External Mail
-    setConfig(CONFIG_UINT32_EXTERNAL_MAIL, "ExternalMail.Enabled", 0);
-    setConfig(CONFIG_UINT32_EXTERNAL_MAIL_INTERVAL, "ExternalMail.Interval", 600);
+	// External Mail
+	setConfig(CONFIG_UINT32_EXTERNAL_MAIL, "ExternalMail.Enabled", 0);
+	setConfig(CONFIG_UINT32_EXTERNAL_MAIL_INTERVAL, "ExternalMail.Interval", 600);
 
     m_VisibleUnitGreyDistance = sConfig.GetFloatDefault("Visibility.Distance.Grey.Unit", 1);
     if(m_VisibleUnitGreyDistance >  MAX_VISIBILITY_DISTANCE)
@@ -1341,10 +1340,6 @@ void World::SetInitialWorldSettings()
     sBattleGroundMgr.CreateInitialBattleGrounds();
     sBattleGroundMgr.InitAutomaticArenaPointDistribution();
 
-    ///- Initialize outdoor pvp
-    sLog.outString( "Starting Outdoor PvP System" );
-    sOutdoorPvPMgr.InitOutdoorPvP();
-
     //Not sure if this can be moved up in the sequence (with static data loading) as it uses MapManager
     sLog.outString( "Loading Transports..." );
     sMapMgr.LoadTransports();
@@ -1523,7 +1518,6 @@ void World::Update(uint32 diff)
         sMapMgr.Update(diff);                // As interval = 0
 
         sBattleGroundMgr.Update(diff);
-        sOutdoorPvPMgr.Update(diff);
     }
 
     ///- Delete all characters which have been deleted X days before

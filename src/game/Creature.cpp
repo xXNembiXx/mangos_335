@@ -37,7 +37,6 @@
 #include "WaypointMovementGenerator.h"
 #include "InstanceData.h"
 #include "BattleGroundMgr.h"
-#include "OutdoorPvPMgr.h"
 #include "Spell.h"
 #include "Util.h"
 #include "GridNotifiers.h"
@@ -151,13 +150,8 @@ Creature::~Creature()
 void Creature::AddToWorld()
 {
     ///- Register the creature for guid lookup
-    if(!IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
-    {
-        if(m_zoneScript)
-            m_zoneScript->OnCreatureCreate(this, true);
-
+    if(!IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().insert<Creature>(GetGUID(), (Creature*)this);
-    }
 
     Unit::AddToWorld();
 }
@@ -165,13 +159,8 @@ void Creature::AddToWorld()
 void Creature::RemoveFromWorld()
 {
     ///- Remove the creature from the accessor
-    if(IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
-    {
-        if(m_zoneScript)
-            m_zoneScript->OnCreatureCreate(this, false);
-
+    if(IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().erase<Creature>(GetGUID(), (Creature*)NULL);
-    }
 
     Unit::RemoveFromWorld();
 }
@@ -206,7 +195,7 @@ void Creature::RemoveCorpse()
 /**
  * change the entry of creature until respawn
  */
-bool Creature::InitEntry(uint32 Entry, uint32 team, const CreatureData *data )
+bool Creature::InitEntry(uint32 Entry, const CreatureData *data )
 {
     CreatureInfo const *normalInfo = ObjectMgr::GetCreatureTemplate(Entry);
     if(!normalInfo)
@@ -305,9 +294,9 @@ bool Creature::InitEntry(uint32 Entry, uint32 team, const CreatureData *data )
     return true;
 }
 
-bool Creature::UpdateEntry(uint32 Entry, uint32 team, const CreatureData *data, bool preserveHPAndPower)
+bool Creature::UpdateEntry(uint32 Entry, Team team, const CreatureData *data, bool preserveHPAndPower)
 {
-    if (!InitEntry(Entry, team, data))
+    if (!InitEntry(Entry, data))
         return false;
 
     m_regenHealth = GetCreatureInfo()->RegenHealth;
@@ -726,7 +715,7 @@ bool Creature::AIM_Initialize()
     return true;
 }
 
-bool Creature::Create(uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, uint32 team, const CreatureData *data)
+bool Creature::Create(uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, Team team, const CreatureData *data)
 {
     CreatureInfo const *cinfo = sObjectMgr.GetCreatureTemplate(Entry);
 
@@ -1213,22 +1202,8 @@ float Creature::GetSpellDamageMod(int32 Rank)
     }
 }
 
-bool Creature::CreateFromProto(ObjectGuid guid, uint32 Entry, uint32 team, const CreatureData *data)
+bool Creature::CreateFromProto(ObjectGuid guid, uint32 Entry, Team team, const CreatureData *data)
 {
-    SetZoneScript();
-    if(m_zoneScript && data)
-    {
-        Entry = m_zoneScript->GetCreatureEntry(guid, data);
-        if(!Entry)
-            return false;
-    }
-
-    CreatureInfo const *cinfo = ObjectMgr::GetCreatureTemplate(Entry);
-    if(!cinfo)
-    {
-        sLog.outErrorDb("Creature entry %u does not exist.", Entry);
-        return false;
-    }
     m_originalEntry = Entry;
 
     Object::_Create(guid);
@@ -1255,8 +1230,7 @@ bool Creature::LoadFromDB(uint32 guidlow, Map *map)
 
     m_DBTableGuid = guidlow;
 
-    uint16 team = 0;
-    if (!Create(guidlow, map, data->phaseMask, data->id, team, data))
+    if (!Create(guidlow, map, data->phaseMask, data->id, TEAM_NONE, data))
         return false;
 
     Relocate(data->posX, data->posY, data->posZ, data->orientation);
@@ -1887,20 +1861,19 @@ bool Creature::LoadCreatureAddon(bool reload)
         SetByteValue(UNIT_FIELD_BYTES_1, 3, uint8((cainfo->bytes1 >> 24) & 0xFF));
     }
 
-    if (cainfo->bytes2 != 0)
-    {
-        // 0 SheathState
-        // 1 UnitPVPStateFlags  Set at Creature::UpdateEntry (SetPvp())
-        // 2 UnitRename         Pet only, so always 0 for default creature
-        // 3 ShapeshiftForm     Must be determined/set by shapeshift spell/aura
+    // UNIT_FIELD_BYTES_2
+    // 0 SheathState
+    // 1 UnitPVPStateFlags  Set at Creature::UpdateEntry (SetPvp())
+    // 2 UnitRename         Pet only, so always 0 for default creature
+    // 3 ShapeshiftForm     Must be determined/set by shapeshift spell/aura
+    if (cainfo->stash != 0)
+        SetByteValue(UNIT_FIELD_BYTES_2, 0, cainfo->stash);
 
-        SetByteValue(UNIT_FIELD_BYTES_2, 0, uint8(cainfo->bytes2 & 0xFF));
-        SetByteValue(UNIT_FIELD_BYTES_2, 1, uint8((cainfo->bytes2 >> 8) & 0xFF));
-        //SetByteValue(UNIT_FIELD_BYTES_2, 2, uint8((cainfo->bytes2 >> 16) & 0xFF));
-        SetByteValue(UNIT_FIELD_BYTES_2, 2, 0);
-        //SetByteValue(UNIT_FIELD_BYTES_2, 3, uint8((cainfo->bytes2 >> 24) & 0xFF));
-        SetByteValue(UNIT_FIELD_BYTES_2, 3, 0);
-    }
+    if (cainfo->pvp_state != 0)
+        SetByteValue(UNIT_FIELD_BYTES_2, 1, cainfo->pvp_state);
+
+    //SetByteValue(UNIT_FIELD_BYTES_2, 2, 0);
+    //SetByteValue(UNIT_FIELD_BYTES_2, 3, 0);
 
     if (cainfo->emote != 0)
         SetUInt32Value(UNIT_NPC_EMOTESTATE, cainfo->emote);
@@ -1958,7 +1931,7 @@ bool Creature::LoadCreatureAddon(bool reload)
 /// Send a message to LocalDefense channel for players opposition team in the zone
 void Creature::SendZoneUnderAttackMessage(Player* attacker)
 {
-    uint32 enemy_team = attacker->GetTeam();
+    Team enemy_team = attacker->GetTeam();
 
     WorldPacket data(SMSG_ZONE_UNDER_ATTACK, 4);
     data << uint32(GetZoneId());

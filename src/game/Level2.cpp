@@ -56,7 +56,7 @@ bool ChatHandler::HandleMuteCommand(char* args)
     char* nameStr = ExtractOptNotLastArg(&args);
 
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if (!ExtractPlayerTarget(&nameStr, &target, &target_guid, &target_name))
         return false;
@@ -98,7 +98,7 @@ bool ChatHandler::HandleMuteCommand(char* args)
 bool ChatHandler::HandleUnmuteCommand(char* args)
 {
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if (!ExtractPlayerTarget(&args, &target, &target_guid, &target_name))
         return false;
@@ -1523,7 +1523,7 @@ bool ChatHandler::HandleModifyRepCommand(char* args)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     uint32 factionId;
@@ -2421,7 +2421,7 @@ bool ChatHandler::HandleDeMorphCommand(char* /*args*/)
 
 
     // check online security
-    else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target, 0))
+    else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target))
         return false;
 
     target->DeMorph();
@@ -2442,7 +2442,7 @@ bool ChatHandler::HandleModifyMorphCommand(char* args)
         target = m_session->GetPlayer();
 
     // check online security
-    else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target, 0))
+    else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target))
         return false;
 
     target->SetDisplayId(display_id);
@@ -2465,7 +2465,7 @@ bool ChatHandler::HandleKickPlayerCommand(char *args)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     // send before target pointer invalidate
@@ -2487,7 +2487,7 @@ bool ChatHandler::HandleModifyPhaseCommand(char* args)
         target = m_session->GetPlayer();
 
     // check online security
-    else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target, 0))
+    else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target))
         return false;
 
     target->SetPhaseMask(phasemask,true);
@@ -2499,7 +2499,7 @@ bool ChatHandler::HandleModifyPhaseCommand(char* args)
 bool ChatHandler::HandlePInfoCommand(char* args)
 {
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if (!ExtractPlayerTarget(&args, &target, &target_guid, &target_name))
         return false;
@@ -2514,7 +2514,7 @@ bool ChatHandler::HandlePInfoCommand(char* args)
     if (target)
     {
         // check online security
-        if (HasLowerSecurity(target, 0))
+        if (HasLowerSecurity(target))
             return false;
 
         accId = target->GetSession()->GetAccountId();
@@ -2531,7 +2531,7 @@ bool ChatHandler::HandlePInfoCommand(char* args)
             return false;
 
         //                                                     0          1      2      3
-        QueryResult *result = CharacterDatabase.PQuery("SELECT totaltime, level, money, account FROM characters WHERE guid = '%u'", GUID_LOPART(target_guid));
+        QueryResult *result = CharacterDatabase.PQuery("SELECT totaltime, level, money, account FROM characters WHERE guid = '%u'", target_guid.GetCounter());
         if (!result)
             return false;
 
@@ -2571,7 +2571,7 @@ bool ChatHandler::HandlePInfoCommand(char* args)
 
     std::string nameLink = playerLink(target_name);
 
-    PSendSysMessage(LANG_PINFO_ACCOUNT, (target?"":GetMangosString(LANG_OFFLINE)), nameLink.c_str(), GUID_LOPART(target_guid), username.c_str(), accId, security, last_ip.c_str(), last_login.c_str(), latency);
+    PSendSysMessage(LANG_PINFO_ACCOUNT, (target?"":GetMangosString(LANG_OFFLINE)), nameLink.c_str(), target_guid.GetCounter(), username.c_str(), accId, security, last_ip.c_str(), last_login.c_str(), latency);
 
     std::string timeStr = secsToTimeString(total_player_time,true,true);
     uint32 gold = money /GOLD;
@@ -2588,7 +2588,7 @@ void ChatHandler::ShowTicket(GMTicket const* ticket)
     std::string lastupdated = TimeToTimestampStr(ticket->GetLastUpdate());
 
     std::string name;
-    if (!sObjectMgr.GetPlayerNameByGUID(ObjectGuid(HIGHGUID_PLAYER, ticket->GetPlayerLowGuid()), name))
+    if (!sObjectMgr.GetPlayerNameByGUID(ticket->GetPlayerGuid(), name))
         name = GetMangosString(LANG_UNKNOWN);
 
     std::string nameLink = playerLink(name);
@@ -2596,7 +2596,7 @@ void ChatHandler::ShowTicket(GMTicket const* ticket)
     char const* response = ticket->GetResponse();
 
 	std::string assignedStr;
-	if(!sObjectMgr.GetPlayerNameByGUID(ObjectGuid(HIGHGUID_PLAYER, ticket->GetAssignedGuid()),assignedStr) && !ticket->GetAssignedSecLevel())
+	if(!sObjectMgr.GetPlayerNameByGUID(ticket->GetAssignedGuid(),assignedStr) && !ticket->GetAssignedSecLevel())
         assignedStr = "keinen";
 		
     PSendSysMessage(LANG_COMMAND_TICKETVIEW, ticket->GetTicketId(), nameLink.c_str(), lastupdated.c_str(), assignedStr.c_str(), ticket->GetAssignedSecLevel(), ticket->GetText());
@@ -2641,7 +2641,7 @@ bool ChatHandler::HandleTicketCommand(char* args)
 
 		if (!px)
 		{
-			size_t count = sTicketMgr.GetAssignedTicketCount(GUID_LOPART(m_session->GetPlayer()->GetGUID()), m_session->GetSecurity());
+			size_t count = sTicketMgr.GetAssignedTicketCount(m_session->GetPlayer()->GetObjectGuid(), m_session->GetSecurity());
 			bool accept = m_session->GetPlayer()->isAcceptTickets();
 			PSendSysMessage(LANG_COMMAND_TICKETCOUNT, count, accept ?  GetMangosString(LANG_ON) : GetMangosString(LANG_OFF));
 			return true;
@@ -2703,13 +2703,13 @@ bool ChatHandler::HandleTicketCommand(char* args)
         }
         else
         {
-            uint64 target_guid;
+            ObjectGuid target_guid;
             std::string target_name;
             if (!ExtractPlayerTarget(&args, NULL, &target_guid, &target_name))
                 return false;
 
             // ticket respond $char_name
-            ticket = sTicketMgr.GetGMTicket(GUID_LOPART(target_guid));
+            ticket = sTicketMgr.GetGMTicket(target_guid);
 
             if (!ticket)
             {
@@ -2723,18 +2723,18 @@ bool ChatHandler::HandleTicketCommand(char* args)
         if (!*args)
             return false;
 
-		isAssigned = ((ticket->GetAssignedGuid()) || (ticket->GetAssignedSecLevel())) ? true : false;
+		isAssigned = ((!ticket->GetAssignedGuid().IsEmpty()) || (ticket->GetAssignedSecLevel())) ? true : false;
 		if(isAssigned)
 		{
 			Player* pl = m_session->GetPlayer();
 			if(!pl)
 				return false;
 
-			if((ticket->GetAssignedGuid() == pl->GetGUIDLow()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
+			if((ticket->GetAssignedGuid() == pl->GetObjectGuid()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
 			{
 				ticket->SetResponseText(args);
 
-				if (Player* pl = sObjectMgr.GetPlayer(ObjectGuid(HIGHGUID_PLAYER, ticket->GetPlayerLowGuid())))
+				if (Player* pl = sObjectMgr.GetPlayer(ticket->GetPlayerGuid()))
 					pl->GetSession()->SendGMResponse(ticket);
 
 				return true;
@@ -2750,7 +2750,7 @@ bool ChatHandler::HandleTicketCommand(char* args)
 		{
 			ticket->SetResponseText(args);
 
-			if (Player* pl = sObjectMgr.GetPlayer(ObjectGuid(HIGHGUID_PLAYER, ticket->GetPlayerLowGuid())))
+			if (Player* pl = sObjectMgr.GetPlayer(ticket->GetPlayerGuid()))
 				pl->GetSession()->SendGMResponse(ticket);
 
 			return true;
@@ -2788,11 +2788,11 @@ bool ChatHandler::HandleTicketCommand(char* args)
 			return false;
 		}
 
-        GMTicket* ticket = sTicketMgr.GetGMTicket(GUID_LOPART(guid));
+        GMTicket* ticket = sTicketMgr.GetGMTicket(guid);
 
         if(!ticket)
         {
-            PSendSysMessage(LANG_COMMAND_TICKETNOTEXIST, GUID_LOPART(guid));
+            PSendSysMessage(LANG_COMMAND_TICKETNOTEXIST, guid);
             SetSentErrorMessage(true);
             return false;
         }
@@ -2806,7 +2806,7 @@ bool ChatHandler::HandleTicketCommand(char* args)
 			
 			if (strncmp(arg,"del",4) == 0)
 			{
-				ticket->SetAssignedGuid(0);
+				ticket->SetAssignedGuid(ObjectGuid());
 				ticket->SetAssignedSecLevel(0);
 				return true;
 			}
@@ -2819,14 +2819,14 @@ bool ChatHandler::HandleTicketCommand(char* args)
 				continue;
 			}
 
-			uint64 atarget_guid;
+			ObjectGuid atarget_guid;
 			if(ExtractPlayerTarget(&arg,NULL,&atarget_guid))
 			{
 				// check if player ist Gamemaster
-				Player* gmPlr = sObjectMgr.GetPlayer(ObjectGuid(atarget_guid));
+				Player* gmPlr = sObjectMgr.GetPlayer(atarget_guid);
 				if(gmPlr && gmPlr->isGameMaster())
 				{
-					ticket->SetAssignedGuid(GUID_LOPART(atarget_guid));
+					ticket->SetAssignedGuid(atarget_guid);
 					hasArg = true;
 				}
 				else
@@ -2875,10 +2875,10 @@ bool ChatHandler::HandleTicketCommand(char* args)
             return false;
         }
 
-		isAssigned = ((ticket->GetAssignedGuid()) || (ticket->GetAssignedSecLevel())) ? true : false;
+		isAssigned = ((!ticket->GetAssignedGuid().IsEmpty()) || (ticket->GetAssignedSecLevel())) ? true : false;
 		if(isAssigned)
 		{
-			if((ticket->GetAssignedGuid() == pl->GetGUIDLow()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
+			if((ticket->GetAssignedGuid() == pl->GetObjectGuid()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
 			{
 					ShowTicket(ticket);
 					return true;
@@ -2897,13 +2897,13 @@ bool ChatHandler::HandleTicketCommand(char* args)
 		}
     }
 
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if (!ExtractPlayerTarget(&px, NULL, &target_guid, &target_name))
         return false;
 
     // ticket $char_name
-    GMTicket* ticket = sTicketMgr.GetGMTicket(GUID_LOPART(target_guid));
+    GMTicket* ticket = sTicketMgr.GetGMTicket(target_guid);
     if (!ticket)
     {
         PSendSysMessage(LANG_COMMAND_TICKETNOTEXIST_NAME, target_name.c_str());
@@ -2911,13 +2911,13 @@ bool ChatHandler::HandleTicketCommand(char* args)
         return false;
     }
 
-	isAssigned = ((ticket->GetAssignedGuid()) || (ticket->GetAssignedSecLevel())) ? true : false;
+	isAssigned = ((!ticket->GetAssignedGuid().IsEmpty()) || (ticket->GetAssignedSecLevel())) ? true : false;
 	if(isAssigned)
 	{
 		Player* pl = m_session->GetPlayer();
 		if(!pl)
 			return false;
-		if((ticket->GetAssignedGuid() == pl->GetGUIDLow()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
+		if((ticket->GetAssignedGuid() == pl->GetObjectGuid()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
 		{
 				ShowTicket(ticket);
 				return true;
@@ -2983,7 +2983,7 @@ bool ChatHandler::HandleCloseTicketCommand(char *args)
             return false;
         }
 
-        uint32 lowguid = ticket->GetPlayerLowGuid();
+        ObjectGuid guid = ticket->GetPlayerGuid();
 
 		Player* pl = m_session->GetPlayer();
 
@@ -2993,16 +2993,16 @@ bool ChatHandler::HandleCloseTicketCommand(char *args)
             return false;
         }
 
-		isAssigned = ((ticket->GetAssignedGuid()) || (ticket->GetAssignedSecLevel())) ? true : false;
+		isAssigned = ((!ticket->GetAssignedGuid().IsEmpty()) || (ticket->GetAssignedSecLevel())) ? true : false;
 		if(isAssigned)
 		{
-			if((ticket->GetAssignedGuid() == pl->GetGUIDLow()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
+			if((ticket->GetAssignedGuid() == pl->GetObjectGuid()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
 			{
-				ticket->SetAssignedGuid(pl->GetGUIDLow());
-				sTicketMgr.Close(lowguid);
+				ticket->SetAssignedGuid(pl->GetObjectGuid());
+				sTicketMgr.Close(guid);
 
 				//notify player
-				if (Player* pl = sObjectMgr.GetPlayer(ObjectGuid(HIGHGUID_PLAYER, lowguid)))
+				if (Player* pl = sObjectMgr.GetPlayer(guid))
 				{
 					pl->GetSession()->SendGMTicketGetTicket(0x0A, 0, false);
 					PSendSysMessage(LANG_COMMAND_TICKETPLAYERCLOSE, GetNameLink(pl).c_str());
@@ -3021,11 +3021,11 @@ bool ChatHandler::HandleCloseTicketCommand(char *args)
 		}
 		else
 		{
-			ticket->SetAssignedGuid(pl->GetGUIDLow());
-			sTicketMgr.Close(lowguid);
+			ticket->SetAssignedGuid(pl->GetObjectGuid());
+			sTicketMgr.Close(guid);
 
 			//notify player
-			if (Player* pl = sObjectMgr.GetPlayer(ObjectGuid(HIGHGUID_PLAYER, lowguid)))
+			if (Player* pl = sObjectMgr.GetPlayer(guid))
 			{
 				pl->GetSession()->SendGMTicketGetTicket(0x0A, 0, false);
 				PSendSysMessage(LANG_COMMAND_TICKETPLAYERCLOSE, GetNameLink(pl).c_str());
@@ -3038,12 +3038,12 @@ bool ChatHandler::HandleCloseTicketCommand(char *args)
     }
 
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if (!ExtractPlayerTarget(&px, &target, &target_guid, &target_name))
         return false;
 
-	GMTicket* ticket = sTicketMgr.GetGMTicket(GUID_LOPART(target_guid));
+	GMTicket* ticket = sTicketMgr.GetGMTicket(target_guid);
     if (!ticket)
     {
         PSendSysMessage(LANG_COMMAND_TICKETNOTEXIST_NAME, target_name.c_str());
@@ -3055,14 +3055,14 @@ bool ChatHandler::HandleCloseTicketCommand(char *args)
 	if(!pl)
 		return false;
 
-	isAssigned = ((ticket->GetAssignedGuid()) || (ticket->GetAssignedSecLevel())) ? true : false;
+	isAssigned = ((!ticket->GetAssignedGuid().IsEmpty()) || (ticket->GetAssignedSecLevel())) ? true : false;
 	if(isAssigned)
 	{
-		if((ticket->GetAssignedGuid() == pl->GetGUIDLow()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
+		if((ticket->GetAssignedGuid() == pl->GetObjectGuid()) || ((ticket->GetAssignedSecLevel() != 0) ? (ticket->GetAssignedSecLevel() <= pl->GetSession()->GetSecurity()) : false))
 		{
-			ticket->SetAssignedGuid(pl->GetGUIDLow());
+			ticket->SetAssignedGuid(pl->GetObjectGuid());
 			// closeticket $char_name
-			sTicketMgr.Close(GUID_LOPART(target_guid));
+			sTicketMgr.Close(target_guid);
 
 			// notify players about ticket closing
 			if (target)
@@ -3082,9 +3082,9 @@ bool ChatHandler::HandleCloseTicketCommand(char *args)
 	}
 	else
 	{
-		ticket->SetAssignedGuid(pl->GetGUIDLow());
+		ticket->SetAssignedGuid(pl->GetObjectGuid());
 		// closeticket $char_name
-		sTicketMgr.Close(GUID_LOPART(target_guid));
+		sTicketMgr.Close(target_guid);
 
 		// notify players about ticket closing
 		if (target)
@@ -4239,7 +4239,7 @@ bool ChatHandler::HandleWpImportCommand(char *args)
 bool ChatHandler::HandleCharacterRenameCommand(char* args)
 {
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if (!ExtractPlayerTarget(&args, &target, &target_guid, &target_name))
         return false;
@@ -4247,7 +4247,7 @@ bool ChatHandler::HandleCharacterRenameCommand(char* args)
     if (target)
     {
         // check online security
-        if (HasLowerSecurity(target, 0))
+        if (HasLowerSecurity(target))
             return false;
 
         PSendSysMessage(LANG_RENAME_PLAYER, GetNameLink(target).c_str());
@@ -4262,8 +4262,8 @@ bool ChatHandler::HandleCharacterRenameCommand(char* args)
 
         std::string oldNameLink = playerLink(target_name);
 
-        PSendSysMessage(LANG_RENAME_PLAYER_GUID, oldNameLink.c_str(), GUID_LOPART(target_guid));
-        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '1' WHERE guid = '%u'", GUID_LOPART(target_guid));
+        PSendSysMessage(LANG_RENAME_PLAYER_GUID, oldNameLink.c_str(), target_guid.GetCounter());
+        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '1' WHERE guid = '%u'", target_guid.GetCounter());
     }
 
     return true;
@@ -4273,7 +4273,7 @@ bool ChatHandler::HandleCharacterRenameCommand(char* args)
 bool ChatHandler::HandleCharacterCustomizeCommand(char* args)
 {
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if (!ExtractPlayerTarget(&args, &target, &target_guid, &target_name))
         return false;
@@ -4288,8 +4288,8 @@ bool ChatHandler::HandleCharacterCustomizeCommand(char* args)
     {
         std::string oldNameLink = playerLink(target_name);
 
-        PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), GUID_LOPART(target_guid));
-        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '8' WHERE guid = '%u'", GUID_LOPART(target_guid));
+        PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), target_guid.GetCounter());
+        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '8' WHERE guid = '%u'", target_guid.GetCounter());
     }
 
     return true;
@@ -4299,7 +4299,7 @@ bool ChatHandler::HandleCharacterCustomizeCommand(char* args)
 bool ChatHandler::HandleCharacterChangeFactionCommand(char* args)
 {
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if(!ExtractPlayerTarget(&args,&target,&target_guid,&target_name))
         return false;
@@ -4316,8 +4316,8 @@ bool ChatHandler::HandleCharacterChangeFactionCommand(char* args)
         std::string oldNameLink = playerLink(target_name);
 
         // TODO : add text into database
-        PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), GUID_LOPART(target_guid));
-        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '64' WHERE guid = '%u'", GUID_LOPART(target_guid));
+        PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), target_guid.GetCounter());
+        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '64' WHERE guid = '%u'", target_guid.GetCounter());
     }
 
     return true;
@@ -4327,7 +4327,7 @@ bool ChatHandler::HandleCharacterChangeFactionCommand(char* args)
 bool ChatHandler::HandleCharacterChangeRaceCommand(char* args)
 {
     Player* target;
-    uint64 target_guid;
+    ObjectGuid target_guid;
     std::string target_name;
     if(!ExtractPlayerTarget(&args,&target,&target_guid,&target_name))
         return false;
@@ -4344,8 +4344,8 @@ bool ChatHandler::HandleCharacterChangeRaceCommand(char* args)
         std::string oldNameLink = playerLink(target_name);
 
         // TODO : add text into database
-        PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), GUID_LOPART(target_guid));
-        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '128' WHERE guid = '%u'", GUID_LOPART(target_guid));
+        PSendSysMessage(LANG_CUSTOMIZE_PLAYER_GUID, oldNameLink.c_str(), target_guid.GetCounter());
+        CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '128' WHERE guid = '%u'", target_guid.GetCounter());
     }
 
     return true;
@@ -4398,7 +4398,7 @@ bool ChatHandler::HandleHonorAddCommand(char* args)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     float amount = (float)atof(args);
@@ -4417,7 +4417,7 @@ bool ChatHandler::HandleHonorAddKillCommand(char* /*args*/)
     }
 
     // check online security
-    if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target, 0))
+    if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target))
         return false;
 
     m_session->GetPlayer()->RewardHonor(target, 1);
@@ -4435,7 +4435,7 @@ bool ChatHandler::HandleHonorUpdateCommand(char* /*args*/)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     target->UpdateHonorFields();
@@ -4665,7 +4665,7 @@ bool ChatHandler::HandleCombatStopCommand(char* args)
         return false;
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     target->CombatStop();
@@ -5035,7 +5035,7 @@ bool ChatHandler::HandleRepairitemsCommand(char* args)
         return false;
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     // Repair items
@@ -5067,7 +5067,7 @@ bool ChatHandler::HandleWaterwalkCommand(char* args)
     }
 
     // check online security
-    if (HasLowerSecurity(player, 0))
+    if (HasLowerSecurity(player))
         return false;
 
     if (value)
@@ -5180,7 +5180,7 @@ bool ChatHandler::HandleTitlesAddCommand(char* args)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     CharTitlesEntry const* titleInfo = sCharTitlesStore.LookupEntry(id);
@@ -5226,7 +5226,7 @@ bool ChatHandler::HandleTitlesRemoveCommand(char* args)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     CharTitlesEntry const* titleInfo = sCharTitlesStore.LookupEntry(id);
@@ -5275,7 +5275,7 @@ bool ChatHandler::HandleTitlesSetMaskCommand(char* args)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     uint64 titles2 = titles;
@@ -5358,7 +5358,7 @@ bool ChatHandler::HandleTitlesCurrentCommand(char* args)
     }
 
     // check online security
-    if (HasLowerSecurity(target, 0))
+    if (HasLowerSecurity(target))
         return false;
 
     CharTitlesEntry const* titleInfo = sCharTitlesStore.LookupEntry(id);

@@ -22,7 +22,7 @@ else
 
 	autoreconf --install --force
 	automake --add-missing
-	automake src/bindings/scriptdev2/Makefile
+	automake src/bindings/ScriptDev2/Makefile
 	mkdir objdir
 	cd objdir
 

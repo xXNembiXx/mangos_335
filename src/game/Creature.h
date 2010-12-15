@@ -173,7 +173,6 @@ struct EquipmentInfo
 // from `creature` table
 struct CreatureData
 {
-    explicit CreatureData() : dbData(true) {}
     uint32 id;                                              // entry in creature_template
     uint16 mapid;
     uint16 phaseMask;
@@ -191,7 +190,6 @@ struct CreatureData
     bool  is_dead;
     uint8 movementType;
     uint8 spawnMask;
-    bool dbData;
 };
 
 struct CreatureDataAddonAura
@@ -206,7 +204,7 @@ struct CreatureDataAddon
     uint32 guidOrEntry;
     uint32 mount;
     uint32 bytes1;
-    uint8  stash;                                           // SheathState
+    uint8  sheath_state;                                    // SheathState
     uint8  pvp_state;                                       // UnitPVPStateFlags
     uint32 emote;
     uint32 splineFlags;

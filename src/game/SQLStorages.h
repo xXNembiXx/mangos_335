@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 MaNGOS <http://www.MaNGOScore.org/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,14 +15,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef OUTDOORPVP_IMPL_H
-#define OUTDOORPVP_IMPL_H
 
-#include "SharedDefines.h"
-#include "OutdoorPvP.h"
-#include "Player.h"
-#include "WorldPacket.h"
+#ifndef MANGOS_SQLSTORAGES_H
+#define MANGOS_SQLSTORAGES_H
 
-#define OTHER_TEAM(a) (a == TEAM_ALLIANCE ? TEAM_HORDE : TEAM_ALLIANCE)
+#include "Common.h"
+#include "Database/SQLStorage.h"
+
+extern SQLStorage sCreatureStorage;
+extern SQLStorage sCreatureDataAddonStorage;
+extern SQLStorage sCreatureInfoAddonStorage;
+extern SQLStorage sCreatureModelStorage;
+extern SQLStorage sEquipmentStorage;
+extern SQLStorage sGOStorage;
+extern SQLStorage sPageTextStore;
+extern SQLStorage sItemStorage;
+extern SQLStorage sInstanceTemplate;
 
 #endif

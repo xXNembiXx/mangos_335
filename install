@@ -22,7 +22,7 @@ else
 
 	autoreconf --install --force
 	automake --add-missing
-	automake src/bindings/scriptdev2/Makefile
+	automake src/bindings/ScriptDev2/Makefile
 	mkdir objdir
 	cd objdir
 
@@ -42,7 +42,7 @@ else
 	touch error.log
 	cd objdir/
 	# write errors in the file error.log
-	make -j2 2> ../error.log
+	make -j8
 
 	# this is only an check if there are problems with creating lib directory
 	mkdir $mangosdir$installdir/lib

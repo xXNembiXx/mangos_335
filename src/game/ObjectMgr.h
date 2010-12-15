@@ -35,21 +35,12 @@
 #include "ObjectAccessor.h"
 #include "ObjectGuid.h"
 #include "Policies/Singleton.h"
-#include "Database/SQLStorage.h"
+#include "Vehicle.h"
+#include "SQLStorages.h"
 
 #include <string>
 #include <map>
 #include <limits>
-
-extern SQLStorage sCreatureStorage;
-extern SQLStorage sCreatureDataAddonStorage;
-extern SQLStorage sCreatureInfoAddonStorage;
-extern SQLStorage sCreatureModelStorage;
-extern SQLStorage sEquipmentStorage;
-extern SQLStorage sGOStorage;
-extern SQLStorage sPageTextStore;
-extern SQLStorage sItemStorage;
-extern SQLStorage sInstanceTemplate;
 
 class Group;
 class Guild;
@@ -914,7 +905,6 @@ class ObjectMgr
 
         WorldSafeLocsEntry const *GetClosestGraveYard(float x, float y, float z, uint32 MapId, Team team);
         bool AddGraveYardLink(uint32 id, uint32 zone, Team team, bool inDB = true);
-		void RemoveGraveYardLink(uint32 id, uint32 zone, Team team, bool inDB = false);
         void LoadGraveyardZones();
         GraveYardData const* FindGraveYardData(uint32 id, uint32 zone) const;
 
@@ -970,6 +960,14 @@ class ObjectMgr
         {
             QuestPOIMap::const_iterator itr = mQuestPOIMap.find(questId);
             if(itr != mQuestPOIMap.end())
+                return &itr->second;
+            return NULL;
+        }
+
+        VehicleAccessoryList const* GetVehicleAccessoryList(uint32 uiEntry) const
+        {
+            VehicleAccessoryMap::const_iterator itr = m_VehicleAccessoryMap.find(uiEntry);
+            if (itr != m_VehicleAccessoryMap.end())
                 return &itr->second;
             return NULL;
         }
@@ -1066,6 +1064,8 @@ class ObjectMgr
         void LoadVendorTemplates();
         void LoadVendors() { LoadVendors("npc_vendor", false); }
         void LoadTrainerSpell();
+
+        void LoadVehicleAccessories();
 
         std::string GeneratePetName(uint32 entry);
         uint32 GetBaseXP(uint32 level) const;
@@ -1248,8 +1248,6 @@ class ObjectMgr
         void RemoveCreatureFromGrid(uint32 guid, CreatureData const* data);
         void AddGameobjectToGrid(uint32 guid, GameObjectData const* data);
         void RemoveGameobjectFromGrid(uint32 guid, GameObjectData const* data);
-        uint32 AddGOData(uint32 entry, uint32 map, float x, float y, float z, float o, uint32 spawntimedelay = 0, float rotation0 = 0, float rotation1 = 0, float rotation2 = 0, float rotation3 = 0);
-        uint32 AddCreData(uint32 entry, uint32 team, uint32 map, float x, float y, float z, float o, uint32 spawntimedelay = 0);
 
         // reserved names
         void LoadReservedPlayersNames();
@@ -1476,6 +1474,8 @@ class ObjectMgr
 
         ItemConvertMap        m_ItemConvert;
         ItemRequiredTargetMap m_ItemRequiredTarget;
+
+        VehicleAccessoryMap m_VehicleAccessoryMap;
 
         typedef             std::vector<LocaleConstant> LocalForIndex;
         LocalForIndex        m_LocalForIndex;

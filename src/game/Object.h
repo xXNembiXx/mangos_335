@@ -72,7 +72,6 @@ class Map;
 class UpdateMask;
 class InstanceData;
 class TerrainInfo;
-class ZoneScript;
 
 typedef UNORDERED_MAP<Player*, UpdateData> UpdateDataMapType;
 
@@ -114,8 +113,9 @@ class MANGOS_DLL_SPEC Object
 
         ObjectGuid const& GetObjectGuid() const { return GetGuidValue(OBJECT_FIELD_GUID); }
         const uint64& GetGUID() const { return GetUInt64Value(OBJECT_FIELD_GUID); }
-        uint32 GetGUIDLow() const { return GUID_LOPART(GetUInt64Value(OBJECT_FIELD_GUID)); }
+        uint32 GetGUIDLow() const { return GetObjectGuid().GetCounter(); }
         PackedGuid const& GetPackGUID() const { return m_PackGUID; }
+        std::string GetGuidStr() const { return GetObjectGuid().GetString(); }
 
         uint32 GetEntry() const { return GetUInt32Value(OBJECT_FIELD_ENTRY); }
         void SetEntry(uint32 entry) { SetUInt32Value(OBJECT_FIELD_ENTRY, entry); }
@@ -499,9 +499,6 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         //obtain terrain data for map where this object belong...
         TerrainInfo const* GetTerrain() const;
 
-        void SetZoneScript();
-        ZoneScript * GetZoneScript() const { return m_zoneScript; }
-
         void AddToClientUpdateList();
         void RemoveFromClientUpdateList();
         void BuildUpdateData(UpdateDataMapType &);
@@ -542,7 +539,6 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         ObjectGuid m_lootRecipientGuid;                     // player who will have rights for looting if m_lootGroupRecipient==0 or group disbanded
         uint32 m_lootGroupRecipientId;                      // group who will have rights for looting if set and exist
 
-        ZoneScript *m_zoneScript;
         std::string m_name;
 
         bool m_isActiveObject;

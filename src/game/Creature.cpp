@@ -37,7 +37,6 @@
 #include "WaypointMovementGenerator.h"
 #include "InstanceData.h"
 #include "BattleGroundMgr.h"
-#include "OutdoorPvPMgr.h"
 #include "Spell.h"
 #include "Util.h"
 #include "GridNotifiers.h"
@@ -151,27 +150,20 @@ Creature::~Creature()
 void Creature::AddToWorld()
 {
     ///- Register the creature for guid lookup
-    if(!IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
-    {
-        if(m_zoneScript)
-            m_zoneScript->OnCreatureCreate(this, true);
-
+    if(!IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().insert<Creature>(GetGUID(), (Creature*)this);
-    }
 
     Unit::AddToWorld();
+
+    if (GetVehicleKit())
+        GetVehicleKit()->Reset();
 }
 
 void Creature::RemoveFromWorld()
 {
     ///- Remove the creature from the accessor
-    if(IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
-    {
-        if(m_zoneScript)
-            m_zoneScript->OnCreatureCreate(this, false);
-
+    if(IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().erase<Creature>(GetGUID(), (Creature*)NULL);
-    }
 
     Unit::RemoveFromWorld();
 }
@@ -294,10 +286,9 @@ bool Creature::InitEntry(uint32 Entry, const CreatureData *data )
 
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
 
-    SetSpeedRate(MOVE_WALK, cinfo->speed_walk);
-    SetSpeedRate(MOVE_RUN,  cinfo->speed_run);
-    SetSpeedRate(MOVE_SWIM, 1.0f);                          // using 1.0 rate
-    SetSpeedRate(MOVE_FLIGHT, 1.0f);                        // using 1.0 rate
+    // update speed for the new CreatureInfo base speed mods
+    UpdateSpeed(MOVE_WALK, false);
+    UpdateSpeed(MOVE_RUN,  false);
 
     // checked at loading
     m_defaultMovementType = MovementGeneratorType(cinfo->MovementType);
@@ -1215,20 +1206,6 @@ float Creature::GetSpellDamageMod(int32 Rank)
 
 bool Creature::CreateFromProto(ObjectGuid guid, uint32 Entry, Team team, const CreatureData *data)
 {
-    SetZoneScript();
-    if(m_zoneScript && data)
-    {
-        Entry = m_zoneScript->GetCreatureEntry(guid, data);
-        if(!Entry)
-            return false;
-    }
-
-    CreatureInfo const *cinfo = ObjectMgr::GetCreatureTemplate(Entry);
-    if(!cinfo)
-    {
-        sLog.outErrorDb("Creature entry %u does not exist.", Entry);
-        return false;
-    }
     m_originalEntry = Entry;
 
     Object::_Create(guid);
@@ -1891,8 +1868,8 @@ bool Creature::LoadCreatureAddon(bool reload)
     // 1 UnitPVPStateFlags  Set at Creature::UpdateEntry (SetPvp())
     // 2 UnitRename         Pet only, so always 0 for default creature
     // 3 ShapeshiftForm     Must be determined/set by shapeshift spell/aura
-    if (cainfo->stash != 0)
-        SetByteValue(UNIT_FIELD_BYTES_2, 0, cainfo->stash);
+    if (cainfo->sheath_state != 0)
+        SetByteValue(UNIT_FIELD_BYTES_2, 0, cainfo->sheath_state);
 
     if (cainfo->pvp_state != 0)
         SetByteValue(UNIT_FIELD_BYTES_2, 1, cainfo->pvp_state);

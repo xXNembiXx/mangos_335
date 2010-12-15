@@ -18,10 +18,10 @@
 
 #include "ObjectMgr.h"
 #include "Database/DatabaseEnv.h"
-#include "Database/SQLStorage.h"
 #include "Database/SQLStorageImpl.h"
 #include "Policies/SingletonImp.h"
 
+#include "SQLStorages.h"
 #include "Log.h"
 #include "MapManager.h"
 #include "ObjectGuid.h"
@@ -870,6 +870,9 @@ void ObjectMgr::LoadCreatureAddons(SQLStorage& creatureaddons, char const* entry
             }
         }
 
+        if (addon->sheath_state > SHEATH_STATE_RANGED)
+            sLog.outErrorDb("Creature (%s %u) has unknown sheath state (%u) defined in `%s`.", entryName, addon->guidOrEntry, addon->sheath_state, creatureaddons.GetTableName());
+
         if (!sEmotesStore.LookupEntry(addon->emote))
         {
             sLog.outErrorDb("Creature (%s %u) have invalid emote (%u) defined in `%s`.", entryName, addon->guidOrEntry, addon->emote, creatureaddons.GetTableName());
@@ -1437,108 +1440,58 @@ void ObjectMgr::RemoveCreatureFromGrid(uint32 guid, CreatureData const* data)
     }
 }
 
-uint32 ObjectMgr::AddGOData(uint32 entry, uint32 mapId, float x, float y, float z, float o, uint32 spawntimedelay, float rotation0, float rotation1, float rotation2, float rotation3)
+void ObjectMgr::LoadVehicleAccessories()
 {
-    GameObjectInfo const* goinfo = GetGameObjectInfo(entry);
-    if (!goinfo)
-        return 0;
+    m_VehicleAccessoryMap.clear();                           // needed for reload case
 
-    Map * map = const_cast<Map*>(sMapMgr.FindMap(mapId));
-    if(!map)
-        return 0;
+    uint32 count = 0;
 
-    uint32 guid = GenerateLowGuid(HIGHGUID_GAMEOBJECT);
-    GameObjectData& data = NewGOData(guid);
-    data.id             = entry;
-    data.mapid          = mapId;
-    data.posX           = x;
-    data.posY           = y;
-    data.posZ           = z;
-    data.orientation    = o;
-    data.rotation0      = rotation0;
-    data.rotation1      = rotation1;
-    data.rotation2      = rotation2;
-    data.rotation3      = rotation3;
-    data.spawntimesecs  = spawntimedelay;
-    data.animprogress   = 100;
-    data.spawnMask      = 1;
-    data.go_state       = GO_STATE_READY;
-    data.phaseMask      = PHASEMASK_NORMAL;
-    data.artKit         = goinfo->type == GAMEOBJECT_TYPE_CAPTURE_POINT ? 21 : 0;
-    data.dbData = false;
+    QueryResult* result = WorldDatabase.Query("SELECT `entry`,`accessory_entry`,`seat_id`,`minion` FROM `vehicle_accessory`");
 
-    AddGameobjectToGrid(guid, &data);
-
-    // Spawn if necessary (loaded grids only)
-    // We use spawn coords to spawn
-    if(!map->Instanceable() && map->IsLoaded(x, y))
+    if (!result)
     {
-        GameObject *go = new GameObject;
-        if (!go->LoadFromDB(guid, map))
-        {
-            sLog.outError("AddGOData: cannot add gameobject entry %u to map", entry);
-            delete go;
-            return 0;
-        }
-        map->Add(go);
+        barGoLink bar(1);
+
+        bar.step();
+
+        sLog.outString();
+        sLog.outErrorDb(">> Loaded 0 vehicle accessories. DB table `vehicle_accessory` is empty.");
+        return;
     }
 
-    sLog.outDebug("AddGOData: dbguid %u entry %u map %u x %f y %f z %f o %f", guid, entry, mapId, x, y, z, o);
+    barGoLink bar((int)result->GetRowCount());
 
-    return guid;
-}
-
-uint32 ObjectMgr::AddCreData(uint32 entry, uint32 team, uint32 mapId, float x, float y, float z, float o, uint32 spawntimedelay)
-{
-    CreatureInfo const *cInfo = GetCreatureTemplate(entry);
-    if(!cInfo)
-        return 0;
-
-    uint32 level = cInfo->minlevel == cInfo->maxlevel ? cInfo->minlevel : urand(cInfo->minlevel, cInfo->maxlevel); // Only used for extracting creature base stats
-    //CreatureBaseStats const* stats = objmgr.GetCreatureBaseStats(level, cInfo->unit_class);
-
-    uint32 guid = GenerateLowGuid(HIGHGUID_UNIT);
-    CreatureData& data = NewOrExistCreatureData(guid);
-    data.id = entry;
-    data.mapid = mapId;
-    data.modelid_override = 0;
-    data.equipmentId = cInfo->equipmentId;
-    data.posX = x;
-    data.posY = y;
-    data.posZ = z;
-    data.orientation = o;
-    data.spawntimesecs = spawntimedelay;
-    data.spawndist = 0;
-    data.currentwaypoint = 0;
-    data.curhealth = 1;
-    data.curmana = 1;
-    data.is_dead = false;
-    data.movementType = cInfo->MovementType;
-    data.spawnMask = 1;
-    data.phaseMask = PHASEMASK_NORMAL;
-    data.dbData = false;
-
-    AddCreatureToGrid(guid, &data);
-
-    // Spawn if necessary (loaded grids only)
-    //if(Map* map = const_cast<Map*>(MapManager::Instance().CreateBaseMap(mapId)))
-    if(Map * map = const_cast<Map*>(sMapMgr.FindMap(mapId)))
+    do
     {
-        // We use spawn coords to spawn
-        if(!map->Instanceable() && !map->IsRemovalGrid(x, y))
-        {
-            Creature* creature = new Creature;
-            if(!creature->LoadFromDB(guid, map))
-            {
-                sLog.outError("AddCreature: cannot add creature entry %u to map", entry);
-                delete creature;
-                return 0;
-            }
-            map->Add(creature);
-        }
-    }
+        Field *fields = result->Fetch();
+        bar.step();
 
-    return guid;
+        uint32 uiEntry       = fields[0].GetUInt32();
+        uint32 uiAccessory   = fields[1].GetUInt32();
+        int8   uiSeat        = int8(fields[2].GetInt16());
+        bool   bMinion       = fields[3].GetBool();
+
+        if (!sCreatureStorage.LookupEntry<CreatureInfo>(uiEntry))
+        {
+            sLog.outErrorDb("Table `vehicle_accessory`: creature template entry %u does not exist.", uiEntry);
+            continue;
+        }
+
+        if (!sCreatureStorage.LookupEntry<CreatureInfo>(uiAccessory))
+        {
+            sLog.outErrorDb("Table `vehicle_accessory`: Accessory %u does not exist.", uiAccessory);
+            continue;
+        }
+
+        m_VehicleAccessoryMap[uiEntry].push_back(VehicleAccessory(uiAccessory, uiSeat, bMinion));
+
+        ++count;
+    } while (result->NextRow());
+
+    delete result;
+
+    sLog.outString();
+    sLog.outString(">> Loaded %u Vehicle Accessories", count);
 }
 
 void ObjectMgr::LoadGameobjects()
@@ -5813,7 +5766,7 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
         m->messageID = fields[0].GetUInt32();
         m->messageType = fields[1].GetUInt8();
         m->sender = fields[2].GetUInt32();
-        m->receiver = fields[3].GetUInt32();
+        m->receiverGuid = ObjectGuid(HIGHGUID_PLAYER, fields[3].GetUInt32());
         bool has_items = fields[4].GetBool();
         m->expire_time = (time_t)fields[5].GetUInt64();
         m->deliver_time = 0;
@@ -5823,7 +5776,7 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
 
         Player *pl = 0;
         if (serverUp)
-            pl = GetPlayer((uint64)m->receiver);
+            pl = GetPlayer(m->receiverGuid);
         if (pl)
         {                                                   //this code will run very improbably (the time is between 4 and 5 am, in game is online a player, who has old mail
             //his in mailbox and he has already listed his mails )
@@ -5859,7 +5812,8 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
             else
             {
                 //mail will be returned:
-                CharacterDatabase.PExecute("UPDATE mail SET sender = '%u', receiver = '%u', expire_time = '" UI64FMTD "', deliver_time = '" UI64FMTD "',cod = '0', checked = '%u' WHERE id = '%u'", m->receiver, m->sender, (uint64)(basetime + 30*DAY), (uint64)basetime, MAIL_CHECK_MASK_RETURNED, m->messageID);
+                CharacterDatabase.PExecute("UPDATE mail SET sender = '%u', receiver = '%u', expire_time = '" UI64FMTD "', deliver_time = '" UI64FMTD "',cod = '0', checked = '%u' WHERE id = '%u'",
+                    m->receiverGuid.GetCounter(), m->sender, (uint64)(basetime + 30*DAY), (uint64)basetime, MAIL_CHECK_MASK_RETURNED, m->messageID);
                 delete m;
                 continue;
             }
@@ -6429,53 +6383,6 @@ bool ObjectMgr::AddGraveYardLink(uint32 id, uint32 zoneId, Team team, bool inDB)
     }
 
     return true;
-}
-
-void ObjectMgr::RemoveGraveYardLink(uint32 id, uint32 zoneId, Team team, bool inDB)
-{
-    GraveYardMap::iterator graveLow  = mGraveYardMap.lower_bound(zoneId);
-    GraveYardMap::iterator graveUp   = mGraveYardMap.upper_bound(zoneId);
-    if(graveLow==graveUp)
-    {
-        //sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.",zoneId,team);
-        return;
-    }
-
-    bool found = false;
-
-    GraveYardMap::iterator itr;
-
-    for (itr = graveLow; itr != graveUp; ++itr)
-    {
-        GraveYardData & data = itr->second;
-
-        // skip not matching safezone id
-        if(data.safeLocId != id)
-            continue;
-
-        // skip enemy faction graveyard at same map (normal area, city, or battleground)
-        // team == 0 case can be at call from .neargrave
-        if(data.team != 0 && team != 0 && data.team != team)
-            continue;
-
-        found = true;
-        break;
-    }
-
-    // no match, return
-    if(!found)
-        return;
-
-    // remove from links
-    mGraveYardMap.erase(itr);
-
-    // remove link from DB
-    if(inDB)
-    {
-        WorldDatabase.PExecute("DELETE FROM game_graveyard_zone WHERE id = '%u' AND ghost_zone = '%u' AND faction = '%u'",id,zoneId,team);
-    }
-
-    return;
 }
 
 void ObjectMgr::LoadAreaTriggerTeleports()

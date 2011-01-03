@@ -5720,7 +5720,7 @@ void ObjectMgr::LoadAreaTriggerTeleports()
         at.requiredLevel        = fields[1].GetUInt8();
         at.requiredItem         = fields[2].GetUInt32();
         at.requiredItem2        = fields[3].GetUInt32();
-        at.heroicLevel			= fields[4].GetUInt8();
+        at.heroicLevel          = fields[4].GetUInt8();
         at.heroicKey            = fields[5].GetUInt32();
         at.heroicKey2           = fields[6].GetUInt32();
         at.requiredQuest        = fields[7].GetUInt32();

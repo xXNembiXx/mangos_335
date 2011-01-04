@@ -2629,6 +2629,18 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             case 68839:                                     // Corrupt Soul
                 target->CastSpell(target, 68846, true, NULL, this);
                 return;
+			case 28059:
+				target->RemoveAurasDueToSpell(29659);
+				return;
+			case 39088:
+				target->RemoveAurasDueToSpell(39089);
+				return;
+			case 28084:
+				target->RemoveAurasDueToSpell(29660);
+				return;
+			case 39091:
+				target->RemoveAurasDueToSpell(39092);
+				return;
         }
 
         // Living Bomb

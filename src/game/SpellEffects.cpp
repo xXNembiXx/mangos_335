@@ -1215,6 +1215,8 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     if (unitTarget)
                         unitTarget->CastSpell(unitTarget, spell_id, true, NULL, NULL, m_caster->GetGUID());
+                    
+                    return;
                 }
                 case 39096:
                 {
@@ -1224,6 +1226,8 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     if (unitTarget)
                         unitTarget->CastSpell(unitTarget, spell_id, true, NULL, NULL, m_caster->GetGUID());
+
+                    return;
                 }
                 case 29200:                                 // Purify Helboar Meat
                 {

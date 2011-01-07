@@ -33,7 +33,7 @@
 #include "Guild.h"
 #include "ObjectAccessor.h"
 #include "MapManager.h"
-#include "ScriptCalls.h"
+#include "ScriptMgr.h"
 #include "Language.h"
 #include "GridNotifiersImpl.h"
 #include "CellImpl.h"
@@ -1422,7 +1422,10 @@ bool ChatHandler::HandleReloadAntiCheatCommand(char* /*arg*/)
 
 bool ChatHandler::HandleLoadScriptsCommand(char* args)
 {
-    if (!LoadScriptingModule(args))
+    if (!*args)
+        return false;
+
+    if (!sScriptMgr.LoadScriptLibrary(args))
         return true;
 
     sWorld.SendWorldText(LANG_SCRIPTS_RELOADED);
@@ -4328,7 +4331,7 @@ bool ChatHandler::HandleAuraCommand(char* args)
     if (!spellInfo)
         return false;
 
-    if (!IsSpellAppliesAura(spellInfo, (1 << EFFECT_INDEX_0) | (1 << EFFECT_INDEX_1) | (1 << EFFECT_INDEX_2)) &&
+    if (!IsSpellAppliesAura(spellInfo) &&
         !IsSpellHaveEffect(spellInfo, SPELL_EFFECT_PERSISTENT_AREA_AURA))
     {
         PSendSysMessage(LANG_SPELL_NO_HAVE_AURAS, spellID);
@@ -7400,6 +7403,48 @@ bool ChatHandler::HandleListFreezeCommand(char* args)
     } while (result->NextRow());
 
     delete result;
+    return true;
+}
+
+//Enable\Dissable <Dev> title
+bool ChatHandler::HandleDevCommand(char* args)
+{
+    if(!*args)
+    {
+        if(m_session->GetPlayer()->isGameMaster())
+        {
+            m_session->GetPlayer()->SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_DEVELOPER);
+            m_session->SendNotification("Dev mode is ON");
+        }
+        else
+        {
+            m_session->GetPlayer()->RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_DEVELOPER);
+            m_session->SendNotification("Dev mode is OFF");
+        }
+        return true;
+    }
+
+    bool value;
+    if (!ExtractOnOff(&args, value))
+    {
+        SendSysMessage(LANG_USE_BOL);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if (value)
+    {
+        m_session->GetPlayer()->SetGameMaster(true);
+        m_session->GetPlayer()->SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_DEVELOPER);
+        m_session->SendNotification("Dev mode is ON");
+    }
+    else
+    {
+        m_session->GetPlayer()->SetGameMaster(false);
+        m_session->GetPlayer()->RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_DEVELOPER);
+        m_session->SendNotification("Dev mode is OFF");
+    }
+
     return true;
 }
 

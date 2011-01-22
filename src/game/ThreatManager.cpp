@@ -47,7 +47,7 @@ float ThreatCalcHelper::calcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, floa
         if(crit)
             pThreat *= pHatedUnit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRITICAL_THREAT,schoolMask);
 
-		pThreat *= 100.0f;
+        pThreat *= 100.0f;
     }
 
     float threat = pHatedUnit->ApplyTotalThreatModifier(pThreat, schoolMask);

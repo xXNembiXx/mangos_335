@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 #include "WaypointManager.h"
 #include "Path.h"
 #include "Traveller.h"
+#include "PathFinder.h"
 
 #include "Player.h"
 
@@ -97,6 +98,8 @@ public PathMovementBase<Creature, WaypointPath const*>
         bool GetDestination(float& x, float& y, float& z) const { return PathMovementBase<Creature, WaypointPath const*>::GetDestination(x,y,z); }
 
         bool GetResetPosition(Creature&, float& x, float& y, float& z);
+
+        void MoveToNextNode(CreatureTraveller &traveller);
 
     private:
         ShortTimeTracker i_nextMoveTime;

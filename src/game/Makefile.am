@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+# Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -193,9 +193,14 @@ libmangosgame_a_SOURCES = \
 	MapUpdater.h \
 	MapReference.h \
 	MapRefManager.h \
+	MassMailMgr.cpp \
+	MassMailMgr.h \
 	MiscHandler.cpp \
 	MotionMaster.cpp \
 	MotionMaster.h \
+	MoveMap.cpp \
+	MoveMap.h \
+	MoveMapSharedDefines.h \
 	MovementGenerator.cpp \
 	MovementGenerator.h \
 	MovementGeneratorImpl.h \
@@ -219,6 +224,8 @@ libmangosgame_a_SOURCES = \
 	Opcodes.cpp \
 	Opcodes.h \
 	Path.h \
+	PathFinder.cpp \
+	PathFinder.h \
 	PetAI.cpp \
 	PetAI.h \
 	Pet.cpp \

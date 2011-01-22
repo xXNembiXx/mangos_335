@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -392,7 +392,7 @@ void PoolGroup<Creature>::Spawn1Object(PoolObject* obj, bool instantly)
                     if(!instantly)
                     {
                         pCreature->SetRespawnTime( pCreature->GetRespawnDelay() );
-                        if (sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATLY) || pCreature->IsWorldBoss())
+                        if (sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATELY) || pCreature->IsWorldBoss())
                             pCreature->SaveRespawnTime();
                     }
                     map->Add(pCreature);
@@ -441,7 +441,7 @@ void PoolGroup<GameObject>::Spawn1Object(PoolObject* obj, bool instantly)
                         if(!instantly)
                         {
                             pGameobject->SetRespawnTime( pGameobject->GetRespawnDelay() );
-                            if (sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATLY))
+                            if (sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATELY))
                                 pGameobject->SaveRespawnTime();
                         }
                         map->Add(pGameobject);

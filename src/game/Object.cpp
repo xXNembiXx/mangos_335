@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -857,15 +857,7 @@ void Object::SetInt32Value( uint16 index, int32 value )
     if(m_int32Values[ index ] != value)
     {
         m_int32Values[ index ] = value;
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -882,15 +874,7 @@ void Object::SetUInt32Value( uint16 index, uint32 value )
     if(m_uint32Values[ index ] != value)
     {
         m_uint32Values[ index ] = value;
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -908,15 +892,7 @@ void Object::SetUInt64Value( uint16 index, const uint64 &value )
     {
         m_uint32Values[ index ] = *((uint32*)&value);
         m_uint32Values[ index + 1 ] = *(((uint32*)&value) + 1);
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -933,15 +909,7 @@ void Object::SetFloatValue( uint16 index, float value )
     if(m_floatValues[ index ] != value)
     {
         m_floatValues[ index ] = value;
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -965,15 +933,7 @@ void Object::SetByteValue( uint16 index, uint8 offset, uint8 value )
     {
         m_uint32Values[ index ] &= ~uint32(uint32(0xFF) << (offset * 8));
         m_uint32Values[ index ] |= uint32(uint32(value) << (offset * 8));
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -997,15 +957,7 @@ void Object::SetUInt16Value( uint16 index, uint8 offset, uint16 value )
     {
         m_uint32Values[ index ] &= ~uint32(uint32(0xFFFF) << (offset * 16));
         m_uint32Values[ index ] |= uint32(uint32(value) << (offset * 16));
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -1066,15 +1018,7 @@ void Object::SetFlag( uint16 index, uint32 newFlag )
     if(oldval != newval)
     {
         m_uint32Values[ index ] = newval;
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -1087,15 +1031,7 @@ void Object::RemoveFlag( uint16 index, uint32 oldFlag )
     if(oldval != newval)
     {
         m_uint32Values[ index ] = newval;
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -1112,15 +1048,7 @@ void Object::SetByteFlag( uint16 index, uint8 offset, uint8 newFlag )
     if(!(uint8(m_uint32Values[ index ] >> (offset * 8)) & newFlag))
     {
         m_uint32Values[ index ] |= uint32(uint32(newFlag) << (offset * 8));
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -1137,15 +1065,7 @@ void Object::RemoveByteFlag( uint16 index, uint8 offset, uint8 oldFlag )
     if(uint8(m_uint32Values[ index ] >> (offset * 8)) & oldFlag)
     {
         m_uint32Values[ index ] &= ~uint32(uint32(oldFlag) << (offset * 8));
-
-        if(m_inWorld)
-        {
-            if(!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -1156,15 +1076,7 @@ void Object::SetShortFlag(uint16 index, bool highpart, uint16 newFlag)
     if (!(uint16(m_uint32Values[index] >> (highpart ? 16 : 0)) & newFlag))
     {
         m_uint32Values[index] |= uint32(uint32(newFlag) << (highpart ? 16 : 0));
-
-        if (m_inWorld)
-        {
-            if (!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -1175,15 +1087,7 @@ void Object::RemoveShortFlag(uint16 index, bool highpart, uint16 oldFlag)
     if (uint16(m_uint32Values[index] >> (highpart ? 16 : 0)) & oldFlag)
     {
         m_uint32Values[index] &= ~uint32(uint32(oldFlag) << (highpart ? 16 : 0));
-
-        if (m_inWorld)
-        {
-            if (!m_objectUpdated)
-            {
-                AddToClientUpdateList();
-                m_objectUpdated = true;
-            }
-        }
+        MarkForClientUpdate();
     }
 }
 
@@ -1225,6 +1129,18 @@ void Object::BuildUpdateData( UpdateDataMapType& /*update_players */)
 {
     sLog.outError("Unexpected call of Object::BuildUpdateData for object (TypeId: %u Update fields: %u)",GetTypeId(), m_valuesCount);
     MANGOS_ASSERT(false);
+}
+
+void Object::MarkForClientUpdate()
+{
+    if(m_inWorld)
+    {
+        if(!m_objectUpdated)
+        {
+            AddToClientUpdateList();
+            m_objectUpdated = true;
+        }
+    }
 }
 
 WorldObject::WorldObject()
@@ -1323,6 +1239,16 @@ float WorldObject::GetDistance(float x, float y, float z) const
     float sizefactor = GetObjectBoundingRadius();
     float dist = sqrt((dx*dx) + (dy*dy) + (dz*dz)) - sizefactor;
     return ( dist > 0 ? dist : 0);
+}
+
+float WorldObject::GetDistanceSqr(float x, float y, float z) const
+{
+    float dx = GetPositionX() - x;
+    float dy = GetPositionY() - y;
+    float dz = GetPositionZ() - z;
+    float sizefactor = GetObjectBoundingRadius();
+    float dist = dx*dx+dy*dy+dz*dz-sizefactor;
+    return (dist > 0 ? dist : 0);
 }
 
 float WorldObject::GetDistance2d(const WorldObject* obj) const
@@ -1503,6 +1429,34 @@ float WorldObject::GetAngle( const float x, const float y ) const
     float ang = atan2(dy, dx);
     ang = (ang >= 0) ? ang : 2 * M_PI_F + ang;
     return ang;
+}
+
+bool WorldObject::HasInArc(const float arcangle, const float x, const float y) const
+{
+    // always have self in arc
+    if(x == m_positionX && y == m_positionY)
+        return true;
+
+    float arc = arcangle;
+
+    // move arc to range 0.. 2*pi
+    while( arc >= 2.0f * M_PI_F )
+        arc -=  2.0f * M_PI_F;
+    while( arc < 0 )
+        arc +=  2.0f * M_PI_F;
+
+    float angle = GetAngle( x, y );
+    angle -= m_orientation;
+
+    // move angle to range -pi ... +pi
+    while( angle > M_PI_F)
+        angle -= 2.0f * M_PI_F;
+    while(angle < -M_PI_F)
+        angle += 2.0f * M_PI_F;
+
+    float lborder =  -1 * (arc/2.0f);                       // in range -pi..0
+    float rborder = (arc/2.0f);                             // in range 0..pi
+    return (( angle >= lborder ) && ( angle <= rborder ));
 }
 
 bool WorldObject::HasInArc(const float arcangle, const WorldObject* obj) const

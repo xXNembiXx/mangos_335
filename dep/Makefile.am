@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+# Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,6 +25,9 @@ endif
 
 # Intel's TBB
 SUBDIRS += tbb
+
+# pathfinding
+SUBDIRS += recastnavigation
 
 ## Additional files to include when running 'make dist'
 #  Nothing yet.

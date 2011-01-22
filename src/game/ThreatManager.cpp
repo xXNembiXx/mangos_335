@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 #include "Player.h"
 #include "ObjectAccessor.h"
 #include "UnitEvents.h"
-#include "SpellMgr.h"
 
 //==============================================================
 //================= ThreatCalcHelper ===========================
@@ -39,24 +38,14 @@ float ThreatCalcHelper::calcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, floa
 
     if (pThreatSpell)
     {
-        SpellThreatEntry const* threatEntry = sSpellMgr.GetSpellThreatEntry(pThreatSpell->Id);
-
         if (pThreatSpell->AttributesEx & SPELL_ATTR_EX_NO_THREAT)
             return 0.0f;
 
         if (Player* modOwner = pHatedUnit->GetSpellModOwner())
-        {
             modOwner->ApplySpellMod(pThreatSpell->Id, SPELLMOD_THREAT, pThreat);
 
-            if(threatEntry && threatEntry->ap_multiplier)
-                pThreat += modOwner->CalculateDamage(BASE_ATTACK, false) * threatEntry->ap_multiplier;
-        }
-
-        if (crit)
+        if(crit)
             pThreat *= pHatedUnit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRITICAL_THREAT,schoolMask);
-
-        if (threatEntry)
-            pThreat *= threatEntry->multiplier;
     }
 
     float threat = pHatedUnit->ApplyTotalThreatModifier(pThreat, schoolMask);
@@ -264,7 +253,15 @@ HostileReference* ThreatContainer::addThreat(Unit* pVictim, float pThreat)
 void ThreatContainer::modifyThreatPercent(Unit *pVictim, int32 pPercent)
 {
     if(HostileReference* ref = getReferenceByTarget(pVictim))
-        ref->addThreatPercent(pPercent);
+    {
+        if(pPercent < -100)
+        {
+            ref->removeReference();
+            delete ref;
+        }
+        else
+            ref->addThreatPercent(pPercent);
+    }
 }
 
 //============================================================
@@ -406,7 +403,7 @@ void ThreatManager::addThreat(Unit* pVictim, float pThreat, bool crit, SpellScho
 
     float threat = ThreatCalcHelper::calcThreat(pVictim, iOwner, pThreat, crit, schoolMask, pThreatSpell);
 
-    threat *= 100.0f;
+	threat *= 100.0f;
 
     if (threat > 0.0f)
     {

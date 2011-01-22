@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -306,14 +306,15 @@ void MotionMaster::MoveFollow(Unit* target, float dist, float angle)
         Mutate(new FollowMovementGenerator<Creature>(*target,dist,angle));
 }
 
-void MotionMaster::MovePoint(uint32 id, float x, float y, float z)
+void
+MotionMaster::MovePoint(uint32 id, float x, float y, float z, bool usePathfinding)
 {
     DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "%s targeted point (Id: %u X: %f Y: %f Z: %f)", m_owner->GetGuidStr().c_str(), id, x, y, z );
 
-    if (m_owner->GetTypeId() == TYPEID_PLAYER)
-        Mutate(new PointMovementGenerator<Player>(id,x,y,z));
+    if(m_owner->GetTypeId() == TYPEID_PLAYER)
+        Mutate(new PointMovementGenerator<Player>(id,x,y,z,usePathfinding));
     else
-        Mutate(new PointMovementGenerator<Creature>(id,x,y,z));
+        Mutate(new PointMovementGenerator<Creature>(id,x,y,z,usePathfinding));
 }
 
 void MotionMaster::MoveSeekAssistance(float x, float y, float z)

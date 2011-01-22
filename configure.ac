@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2010 MaNGOS project <http://getmangos.com/>
+# Copyright (C) 2005-2011 MaNGOS project <http://getmangos.com/>
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -336,6 +336,8 @@ AH_BOTTOM([#endif /* !AC_CONFIG_H */])
 AC_CONFIG_FILES([
    dep/include/Makefile
    dep/lib/Makefile
+   dep/recastnavigation/Makefile
+   dep/recastnavigation/Detour/Makefile
    dep/src/Makefile
    dep/src/g3dlite/Makefile
    dep/src/zlib/Makefile

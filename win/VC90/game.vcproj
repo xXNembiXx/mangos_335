@@ -883,7 +883,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\game\MassMailMgr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\MassMailMgr.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\game\MiscHandler.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\MoveMap.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\MoveMap.h"
+				>
+			</File>
+            <File
+				RelativePath="..\..\src\game\MoveMapSharedDefines.h"
 				>
 			</File>
 			<File
@@ -1120,6 +1140,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\MovementGenerator.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\PathFinder.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\PathFinder.h"
 				>
 			</File>
 			<File
